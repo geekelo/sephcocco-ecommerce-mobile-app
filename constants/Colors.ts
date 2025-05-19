@@ -19,8 +19,9 @@ export const Colors = {
     success:'#16642B',
     placeholder:'rgba(0, 0, 0, 0.63)',
     gray:'#545454',
-    border:'rgba(255, 255, 255, 0.34)',
-    borderorange:'rgba(249, 58, 1, 0.41)'
+    border:'rgba(0, 0, 0, 0.15)',
+    borderorange:'rgba(249, 58, 1, 0.41)',
+    pink:'rgba(255, 167, 140, 0.11)'
   },
   dark: {
     text: '#FFF',
@@ -35,6 +36,7 @@ export const Colors = {
       placeholder:'rgba(255, 255, 255, 0.63)',
       gray:'	#222222',
       border:'rgba(255, 255, 255, 0.34)',
-       borderorange:'rgba(249, 58, 1, 0.41)'
+       borderorange:'rgba(249, 58, 1, 0.41)',
+       pink:'rgba(255, 167, 140, 0.11)'
   },
 };

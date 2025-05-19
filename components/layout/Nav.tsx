@@ -1,16 +1,22 @@
-import React, { useState } from 'react';
-import { View, TouchableOpacity, StyleSheet, Image, useColorScheme } from 'react-native';
-import { Entypo } from '@expo/vector-icons';
-import { ThemedText } from '../ThemedText';
-import { ThemedView } from '../ThemedView';
-import { Colors } from '@/constants/Colors';
-import { Link } from 'expo-router';
+import React, { useState } from "react";
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  useColorScheme,
+} from "react-native";
+import { Entypo, Feather } from "@expo/vector-icons";
+import { ThemedText } from "../ThemedText";
+import { ThemedView } from "../ThemedView";
+import { Colors } from "@/constants/Colors";
+import { Link } from "expo-router";
 
 export function NavBar() {
   const colorScheme = useColorScheme();
-  const theme = Colors[colorScheme ?? 'light'];
+  const theme = Colors[colorScheme ?? "light"];
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false); // State to manage dropdown visibility
+  const [dropdownOpen, setDropdownOpen] = useState(false); 
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -21,70 +27,145 @@ export function NavBar() {
   };
 
   return (
-    <ThemedView style={[styles.navBarContainer, { backgroundColor: theme.text }]}>
+    <ThemedView
+      style={[styles.navBarContainer, { backgroundColor: "#ffead1" }]}
+    >
       {/* Logo */}
       <View style={styles.logoContainer}>
-        <Image source={require('@/assets/images/SEPHCOCO LOUNGE 3.png')} style={styles.logo} />
+        <Image
+          source={require("@/assets/images/SEPHCOCO LOUNGE 3.png")}
+          style={styles.logo}
+        />
       </View>
 
       {/* Hamburger Icon */}
       <TouchableOpacity onPress={toggleSidebar} style={styles.hamburgerIcon}>
-        <Entypo name="menu" size={30} color={theme.background} />
+        {sidebarOpen ? (
+          <Entypo name="cross" size={30} color={theme.text} />
+        ) : (
+          <Entypo name="menu" size={30} color={theme.text} />
+        )}
       </TouchableOpacity>
 
       {/* Sidebar */}
       {sidebarOpen && (
-        <View style={[styles.sidebar, { backgroundColor: theme.text }]}>
-        
-          <Image source={require('@/assets/images/SEPHCOCO LOUNGE 3.png')} style={styles.logobox} />
-          <Link href="/ProductPage" style={[styles.sidebarText, { color: theme.background, borderBottomColor: theme.border }]} asChild>
-          <ThemedText type="default" >
-            Products
-          </ThemedText>
+        <View style={[styles.sidebar, { backgroundColor: theme.background }]}>
+          <Image
+            source={require("@/assets/images/SEPHCOCO LOUNGE 3.png")}
+            style={styles.logobox}
+          />
+          <Link
+            href="/ProductPage"
+            style={[
+              styles.sidebarText,
+              { color: theme.text, borderBottomColor: theme.border },
+            ]}
+            asChild
+          >
+            <ThemedText type="default">Products</ThemedText>
           </Link>
 
           {/* Image frame between Products and Pending Orders */}
           <Image
-            source={require('@/assets/images/Frame 1321317696.png')} // Replace with your actual image
-            style={[styles.imageFrame, { zIndex: -1 }]} // Image placed under text
+            source={require("@/assets/images/Frame 1321317696.png")} 
+            style={[styles.imageFrame, { zIndex: -1 }]} 
           />
 
-          <ThemedText type="default" style={[styles.sidebarText, { color: theme.background, borderBottomColor: theme.border }]}>
-            Pending Orders
-          </ThemedText>
+           <Link
+            href="/pendingOrder"
+            style={[
+              styles.sidebarText,
+              { color: theme.text, borderBottomColor: theme.border },
+            ]}
+            asChild
+          >
 
-          <ThemedText type="default" style={[styles.sidebarText, { color: theme.background, borderBottomColor: theme.border }]}>
+          <ThemedText
+            type="default"
+            
+          >
+            Pending
+          </ThemedText>
+          </Link>
+          <ThemedText
+            type="default"
+            style={[
+              styles.sidebarText,
+              { color: theme.text, borderBottomColor: theme.border },
+            ]}
+          >
+            Completed
+          </ThemedText>
+          <ThemedText
+            type="default"
+            style={[
+              styles.sidebarText,
+              { color: theme.text, borderBottomColor: theme.border },
+            ]}
+          >
+            Payment History
+          </ThemedText>
+           <Link
+            href="/message"
+            style={[
+              styles.sidebarText,
+              { color: theme.text, borderBottomColor: theme.border },
+            ]}
+            asChild
+          >
+          <ThemedText
+            type="default"
+          
+          >
             Messages
           </ThemedText>
+          </Link>
 
           {/* Store Dropdown */}
-          <View  style={[ styles.sidebarText,  {borderBottomColor: theme.border} ]}>
-          <TouchableOpacity onPress={toggleDropdown} style={[styles.storeButton  ]}>
-            <ThemedText type="default" style={[{ color: theme.background, }]}>
-              Stores
-            </ThemedText>
-            <Entypo name={dropdownOpen ? 'chevron-up' : 'chevron-down'} size={20} color={theme.background} />
-          </TouchableOpacity>
+          <View
+            style={[styles.sidebarText, { borderBottomColor: theme.border }]}
+          >
+            <TouchableOpacity
+              onPress={toggleDropdown}
+              style={[styles.storeButton]}
+            >
+              <ThemedText type="default" style={[{ color: theme.text }]}>
+                Stores
+              </ThemedText>
+              <Entypo
+                name={dropdownOpen ? "chevron-up" : "chevron-down"}
+                size={20}
+                color={theme.text}
+              />
+            </TouchableOpacity>
 
-          {dropdownOpen && (
-            <View style={styles.dropdownContainer}>
-              <TouchableOpacity style={styles.dropdownItem}>
-                <ThemedText type="default" style={{ color: theme.background }}>
-                  Restaurant
-                </ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.dropdownItem}>
-                <ThemedText type="default" style={{ color: theme.background }}>
-                  Pharmacy
-                </ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.dropdownItem}>
-                <ThemedText type="default" style={{ color: theme.background }}>
-                  Lounge
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          )}
+            {dropdownOpen && (
+              <View style={styles.dropdownContainer}>
+                <TouchableOpacity style={styles.dropdownItem}>
+                  <ThemedText type="default" style={{ color: theme.text }}>
+                    Restaurant
+                  </ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.dropdownItem}>
+                  <ThemedText type="default" style={{ color: theme.text }}>
+                    Pharmacy
+                  </ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.dropdownItem}>
+                  <ThemedText type="default" style={{ color: theme.text }}>
+                    Lounge
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+          <View style={styles.bottomIcons}>
+            <TouchableOpacity style={styles.iconItem}>
+              <Feather name="log-out" size={30} color={theme.text} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconItem}>
+              <Feather name="user" size={30} color={theme.text} />
+            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -94,17 +175,17 @@ export function NavBar() {
 
 const styles = StyleSheet.create({
   navBarContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     padding: 10,
   },
   logoContainer: {
     flex: 1,
   },
-  logobox:{
-  width: 39,
+  logobox: {
+    width: 39,
     height: 39,
-    marginVertical:40
+    marginVertical: 40,
   },
   logo: {
     width: 43,
@@ -114,39 +195,61 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   sidebar: {
-    position: 'absolute',
-    top: '100%',
-    right: 0,
-    width: '75%',
-    height: 1000,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "75%",
+    height: 850,
     padding: 40,
-    borderRightWidth: 1,
     zIndex: 10,
+    borderTopRightRadius: 24,
+    borderBottomRightRadius: 24,
+    elevation: 1,
   },
   sidebarText: {
-    paddingVertical: 30,
-    borderBottomWidth: 0.7,
+    paddingVertical: 20,
+    borderBottomWidth: 0.4,
     zIndex: 10,
   },
   imageFrame: {
     width: 221,
     height: 226, // Set the height of the image frame
     marginVertical: 20, // Add some space around the image frame
-    position: 'absolute', // To make it overlay under the items
+    position: "absolute", // To make it overlay under the items
     top: 60,
-    left:'30%',
-    zIndex: -1, // Set the image behind the text
+    left: "30%",
+    zIndex: -1,
   },
   dropdownContainer: {
-   
-    paddingVertical: 10,
+    paddingVertical: 7,
   },
   dropdownItem: {
-    paddingVertical: 15,
+    paddingVertical: 10,
   },
   storeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap:8
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    display: "flex",
+    justifyContent: "space-between",
+  },
+  bottomIcons: {
+    position: "absolute",
+    bottom: 60,
+    left: 40,
+    gap: 40,
+    display: "flex",
+    flexDirection: "row",
+  },
+
+  iconItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  iconText: {
+    color: "#fff",
+    fontSize: 16,
   },
 });

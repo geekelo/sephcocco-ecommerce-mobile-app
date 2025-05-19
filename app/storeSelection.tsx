@@ -27,12 +27,19 @@ export default function StoreSelectionScreen() {
       <ThemedText type="title" style={[styles.headerText, { color: theme.text }]}>
         Welcome to Sephcocco Outlet
       </ThemedText>
+       <ThemedText  style={[styles.text, {color: theme.gray }]}>
+       Please choose any of the Sephcocco outlets to place your orders.
+      </ThemedText>
+        <ThemedText  style={[styles.desc, { color: theme.borderorange}]}>
+       Always at your service
+      </ThemedText>
+
 
       <View style={styles.options}>
         {options.map((item, index) => (
           <Pressable
             key={index}
-            style={[styles.optionButton, { borderColor: theme.orange}]}
+            style={[styles.optionButton, { borderColor: theme.borderorange}]}
             onPress={() => router.push(item.href as any)}>
             <IconSymbol name={item.icon as any} size={22} color={theme.gray} />
             <Text style={[styles.optionTitle, { color: theme.text }]}>
@@ -51,7 +58,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 30,
     paddingVertical: 60,
-    gap: 30,
+    gap: 10,
   },
   imageWrapper: {
     alignItems: 'flex-start',
@@ -64,15 +71,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 22,
     fontFamily: 'PTSerif-Regular',
+    paddingTop:100
   },
   options: {
-    gap: 36,
+    gap: 20,
     margin:30
   },
   optionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 0.6,
+    borderWidth: 0.4,
     borderRadius: 6,
     padding: 15,
     justifyContent: 'center',
@@ -85,4 +93,18 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontWeight:500
   },
+  desc:{
+   
+    fontStyle:'italic',
+    fontSize:24,
+    fontWeight:600,
+    textAlign:'center',
+    padding:0,
+    margin:0,
+    
+  }, text:{
+    fontSize:20,
+    textAlign:'center',
+    lineHeight:30
+  }
 });

@@ -26,7 +26,7 @@ export function Card({
   const theme = Colors[colorScheme ?? 'light'];
 
   return (
-    <ThemedView style={[styles.card, { borderColor: theme.orange }]}>
+    <ThemedView style={[styles.card, ]}>
 <ThemedView style={{padding:8}}>
       <Image source={image} style={styles.image} />
 
@@ -40,13 +40,17 @@ export function Card({
 
       <ThemedView style={styles.rowBetween}>
         <ThemedText style={styles.amount} fontFamily='Raleway-Regular'>{amount}</ThemedText>
-        <ThemedText style={styles.stockText} fontFamily='Raleway-Regular'>In stock: {stock} items</ThemedText>
+      
+      </ThemedView>
+       <ThemedView style={styles.rowBetween}>
+        <ThemedText style={[styles.amount, {color:theme.success}]} fontFamily='Raleway-Regular'>In stock</ThemedText>
+        <ThemedText style={styles.stockText} fontFamily='Raleway-Regular'> {stock} items</ThemedText>
       </ThemedView>
       </ThemedView>
 
       <TouchableOpacity style={[styles.button, {backgroundColor:theme.orange}]} onPress={onPress}>
-        <ThemedText style={[styles.buttonText, {color:theme.background}]} fontFamily='Raleway-Regular'>See more</ThemedText>
-        <Feather name="arrow-right" size={10} color={theme.background} />
+        <ThemedText style={[styles.buttonText, {color:theme.background}]} fontFamily='Raleway-Regular'>Place Order</ThemedText>
+     
       </TouchableOpacity>
     </ThemedView>
   );
@@ -54,15 +58,24 @@ export function Card({
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: 0.37,
-    borderRadius: 6,
-   
-    paddingTop:10,
-    minWidth:140,
-   
-    justifyContent: 'space-between',
-    minHeight: 250,
+  borderRadius: 6,
+  paddingTop: 10,
+  minWidth: 140,
+  justifyContent: 'space-between',
+  minHeight: 250,
+  elevation: 3, // Android shadow
+
+  // iOS shadow
+  shadowColor: '#000',
+  shadowOffset: {
+    width: 0,
+    height: 2,
   },
+  shadowOpacity: 0.2,
+  shadowRadius: 6,
+  backgroundColor: '#fff', // Needed for shadow to be visible on iOS
+},
+
   image: {
   width: '100%',
   height: undefined,
@@ -79,8 +92,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   title: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: 700,
   },
   favContainer: {
     flexDirection: 'row',
@@ -91,11 +104,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   amount: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
   stockText: {
-    fontSize: 6,
+    fontSize: 8,
     fontWeight:500
   },
   button: {
@@ -110,7 +123,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   buttonText: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: 600,
   },
 });

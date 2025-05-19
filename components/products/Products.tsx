@@ -85,10 +85,17 @@ export default function Products() {
   const toggleFilter = () => {
     setFilterOpen(!filterOpen);
   };
+  const filterOptions = [
+  'Price: Low to High',
+  'Price: High to Low',
+  'Newest First',
+  'Categories',
+  'Rating',
+];
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Header */}
-    <SearchBar onFilterToggle={toggleFilter} filterOpen={filterOpen} />
+    <SearchBar filterOptions={filterOptions} onFilterToggle={toggleFilter} filterOpen={filterOpen} />
 
       {/* Product Cards in Grid */}
       <ThemedView style={styles.gridContainer}>

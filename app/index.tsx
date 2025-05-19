@@ -1,76 +1,62 @@
-import { Image } from 'expo-image';
-import { StyleSheet, Text, View, useColorScheme } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import InputField from '@/components/ui/InputField';
-import CustomButton from '@/components/ui/CustomButton';
-import { Colors } from '@/constants/Colors';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Link, router } from 'expo-router';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Image } from 'react-native';
+import { useRouter } from 'expo-router';
 
-export default function SignupScreen() {
-  const colorScheme = useColorScheme();
-  const theme = Colors[colorScheme ?? 'light'];
+const SplashScreen = () => {
+  const spinAnim = useRef(new Animated.Value(0)).current;
+  const router = useRouter();
+
+  useEffect(() => {
+    // Start spinning animation
+    Animated.loop(
+      Animated.timing(spinAnim, {
+        toValue: 1,
+        duration: 2000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Navigate after 6 seconds
+    const timeout = setTimeout(() => {
+      router.replace('/storeSelection');
+    }, 6000);
+
+    return () => clearTimeout(timeout);
+  }, []);
+
+  const spin = spinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
-   
-    <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={styles.imageWrapper}>
-        <Image
-          source={require('@/assets/images/SEPHCOCO LOUNGE 3.png')}
-          style={styles.logo}
-        />
-      </View>
-      <ThemedText type="subtitle"  style={{ color: theme.text, textAlign:'center' }}>Sign Up</ThemedText>
-      <View style={styles.form}>
-        
-        <InputField label="Phone Number" placeholder="Enter phone number" />
-        <InputField label="WhatsApp Number" placeholder="Enter WhatsApp number" />
-        <InputField label="Create Password" placeholder="Enter password" secureTextEntry />
-        <InputField label="Confirm Password" placeholder="Confirm password" secureTextEntry />
-        <CustomButton text="Sign Up Now" onPress={() => {router.push('/storeSelection')}} />
-        <Text style={[styles.loginText, { color: theme.text }]}>
-          Already have an account? <Link style={[styles.loginLink, { color: theme.success }]} href="/signIn">Sign in</Link>
-        </Text>
-      </View>
-    </ThemedView>
-    
+    <View style={styles.container}>
+      <Animated.Image
+        source={require('@/assets/images/logo.png')} // Your logo image
+        style={[styles.logo, { transform: [{ rotate: spin }] }]}
+      />
+      <Text style={styles.logoText}>Sephcocco...</Text>
+    </View>
   );
-}
+};
+
+export default SplashScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'column',
-    paddingHorizontal: 30,
-    gap: 20,
-    paddingVertical:60,
-    
-    
-  },
-  imageWrapper: {
+    backgroundColor: '#000',
     justifyContent: 'center',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   logo: {
-    height: 67,
-    width: 64,
+    width: 100,
+    height: 100,
+    marginBottom: 20,
   },
-  form: {
-    flex: 1,
-    gap: 10,
-    paddingTop:40
-  },
-  loginText: {
-    textAlign: 'center',
-     fontFamily: 'PTSerif-Regular',
-   
-  },
-  loginLink: {
+  logoText: {
+    color: '#fff',
+    fontSize: 20,
     fontWeight: 'bold',
-     fontFamily: 'PTSerif-Regular',
-     textDecorationStyle:'dashed',
-     textDecorationLine:'underline'
   },
 });

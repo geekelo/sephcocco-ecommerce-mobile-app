@@ -13,14 +13,11 @@ export function Layout({ children }: LayoutProps) {
       {/* Fixed Top Navigation */}
       <NavBar />
 
-      {/* Scrollable Main Content */}
-      <ScrollView contentContainerStyle={styles.content}>
+      {/* Scrollable Content including children and footer */}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         {children}
-     
-
-      {/* Fixed Bottom Footer */}
-      <Footer />
-       </ScrollView>
+        <Footer />
+      </ScrollView>
     </View>
   );
 }
@@ -28,11 +25,10 @@ export function Layout({ children }: LayoutProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop:30
+    paddingTop: 30, // to avoid status bar area (optional)
   },
-  content: {
+  scrollContent: {
     flexGrow: 1,
-    
-    
+  
   },
 });

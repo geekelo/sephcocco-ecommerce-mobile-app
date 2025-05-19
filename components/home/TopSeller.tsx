@@ -41,8 +41,8 @@ export default function TopSeller() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 30,
-    paddingVertical: 32,
+    paddingHorizontal: 30,
+    paddingVertical: 20,
   },
   headerRow: {
     flexDirection: 'row',
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   headerText: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '600',
   },
   seeAll: {
