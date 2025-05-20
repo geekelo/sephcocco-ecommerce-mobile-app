@@ -47,11 +47,25 @@ export function Card({
         <ThemedText style={styles.stockText} fontFamily='Raleway-Regular'> {stock} items</ThemedText>
       </ThemedView>
       </ThemedView>
+<TouchableOpacity
+  style={[
+    styles.button,
+    {
+      backgroundColor: stock === 0 ? theme.gray : theme.orange,
+      opacity: stock === 0 ? 0.6 : 1,
+    },
+  ]}
+  onPress={onPress}
+  disabled={stock === 0}
+>
+  <ThemedText
+    style={[styles.buttonText, { color: theme.background }]}
+    fontFamily="Raleway-Regular"
+  >
+    {stock === 0 ? 'Out of Stock' : 'Place Order'}
+  </ThemedText>
+</TouchableOpacity>
 
-      <TouchableOpacity style={[styles.button, {backgroundColor:theme.orange}]} onPress={onPress}>
-        <ThemedText style={[styles.buttonText, {color:theme.background}]} fontFamily='Raleway-Regular'>Place Order</ThemedText>
-     
-      </TouchableOpacity>
     </ThemedView>
   );
 }

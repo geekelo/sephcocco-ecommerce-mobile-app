@@ -49,7 +49,7 @@ const productData = [
     title: 'Modern Sofa',
     favorites: 34,
     amount: '$230.00',
-    stock: 12,
+    stock: 0,
   },
   {
     id: 6,
@@ -65,7 +65,7 @@ const productData = [
     title: 'Reading Lamp',
     favorites: 56,
     amount: '$75.00',
-    stock: 9,
+    stock:0,
   },
   {
     id: 8,

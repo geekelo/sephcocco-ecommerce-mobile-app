@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, useColorScheme } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import ProductInfo from '@/components/products/productInfo';
@@ -7,9 +7,12 @@ import InfoSection from '@/components/order/infoSection';
 import { useLocalSearchParams } from 'expo-router';
 import { orders } from '@/components/order/ordersdata';
 import { Layout } from '@/components/layout/Layout';
+import { Colors } from '@/constants/Colors';
 
 const OrderDetails = () => {
   const navigation = useNavigation();
+  const colorScheme = useColorScheme();
+    const theme = Colors[colorScheme ?? "light"];
   const route = useRoute();
    const { orderId } = useLocalSearchParams();
   
@@ -21,18 +24,18 @@ const OrderDetails = () => {
   
   return (
     <Layout>
-    <View style={styles.container} >
+    <View style={[styles.container, {backgroundColor:theme.text}]} >
       {/* Navigation */}
       <View style={styles.nav}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton} activeOpacity={0.7}>
-          <MaterialIcons name="arrow-back" size={20} color="#ff6b35" />
-          <Text style={styles.backText}>Back</Text>
+          <MaterialIcons name="arrow-back" size={20} color={theme.text} />
+          <Text style={[styles.backText, {color:theme.text}]}>Back</Text>
         </TouchableOpacity>
       </View>
       
       {/* Order Status Message */}
       <View style={styles.statusMessage}>
-        <Text style={styles.statusText}>
+        <Text style={[styles.statusText, {color:theme.success}]}>
           Your order will be completed 2-3 hours after arrival. During this period, you can raise a dispute if 
           you did not receive your product or received the wrong product.
         </Text>
@@ -82,7 +85,7 @@ const OrderDetails = () => {
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
         <TouchableOpacity style={styles.helpButton} activeOpacity={0.8}>
-          <Text style={styles.helpButtonText}>Get Help</Text>
+          <Text style={[styles.helpButtonText, {color:theme.text}]}>Get Help</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -96,7 +99,6 @@ export default OrderDetails;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
     paddingHorizontal: 20,
     paddingVertical: 20,
   },
@@ -110,7 +112,7 @@ const styles = StyleSheet.create({
   backText: {
     marginLeft: 8,
     fontSize: 16,
-    color: '#ff6b35',
+   
     fontWeight: '500',
   },
   statusMessage: {
@@ -124,7 +126,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 14,
     lineHeight: 21,
-    color: '#2E7D32',
+   
   },
   descriptionSection: {
     marginTop: 24,
@@ -145,7 +147,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     justifyContent: 'space-between',
     marginBottom: 24,
-    gap: 16, // Note: gap is not supported in RN, can use margin between children instead
+    gap: 16, 
   },
   actionButtons: {
     marginTop: 32,
@@ -157,7 +159,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   helpButtonText: {
-    color: 'white',
+  
     fontWeight: '500',
     fontSize: 16,
   },

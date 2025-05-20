@@ -96,6 +96,14 @@ export function NavBar() {
           >
             Completed
           </ThemedText>
+           <Link
+            href="/paymentHistory"
+            style={[
+              styles.sidebarText,
+              { color: theme.text, borderBottomColor: theme.border },
+            ]}
+            asChild
+          >
           <ThemedText
             type="default"
             style={[
@@ -105,6 +113,7 @@ export function NavBar() {
           >
             Payment History
           </ThemedText>
+          </Link>
            <Link
             href="/message"
             style={[
