@@ -133,7 +133,6 @@ const numColumns = width > 768 ? 3 : width > 480 ? 2 : 1;
 const styles = StyleSheet.create({
   container: {
      paddingTop: Platform.OS === 'android' ? 32 : 40,
-   
     paddingBottom: 60,
   },
   headerRow: {
@@ -159,7 +158,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    paddingVertical:40, gap:8
+    paddingVertical:40,
+    margin:8
   },
   cardWrapper: {
     width: '48%',

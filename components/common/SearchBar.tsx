@@ -115,7 +115,7 @@ const getThemedStyles = (theme: any) =>
       borderWidth: 0.5,
       padding: 12,
       width: screenWidth * 0.6, // 60% of screen width
-      backgroundColor: '#fff',
+      backgroundColor: theme.text,
       borderColor: theme.border,
       zIndex: 1000,
       elevation: 10,
