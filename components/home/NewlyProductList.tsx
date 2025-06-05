@@ -44,7 +44,7 @@ export default function ProductList() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 30,
+    padding: 20,
     paddingVertical: 20,
   },
   headerRow: {

@@ -41,7 +41,7 @@ export default function TopSeller() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 30,
+    paddingHorizontal: 20,
     paddingVertical: 20,
   },
   headerRow: {

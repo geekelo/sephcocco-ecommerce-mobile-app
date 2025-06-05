@@ -6,6 +6,7 @@ import {
   Text,
   StyleSheet,
   useColorScheme,
+  Dimensions,
 } from 'react-native';
 import { Feather, Entypo } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
@@ -38,7 +39,7 @@ export function SearchBar({
           onChangeText={onSearchChange}
         />
         <View style={themedStyles.verticalDivider} />
-        <TouchableOpacity style={styles.filterButton} onPress={onFilterToggle}>
+        <TouchableOpacity style={themedStyles.filterButton} onPress={onFilterToggle}>
           <Text style={[styles.filterText, { color: theme.gray }]}>Filter By</Text>
           <Entypo name="chevron-down" size={14} color={theme.gray} />
         </TouchableOpacity>
@@ -58,16 +59,11 @@ export function SearchBar({
   );
 }
 
+const screenWidth = Dimensions.get('window').width;
+
 const styles = StyleSheet.create({
   searchIcon: {
     marginRight: 8,
-  },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    width: 220,
   },
   filterText: {
     fontSize: 10,
@@ -87,9 +83,9 @@ const getThemedStyles = (theme: any) =>
       shadowOpacity: 0.1,
       shadowRadius: 6,
       elevation: 1,
-      marginHorizontal: 40,
+      marginHorizontal: screenWidth * 0.05, // 5% of screen width
       marginTop: 20,
-      borderWidth: 0.2,
+      borderWidth: 0.3,
       backgroundColor: theme.background,
       borderColor: theme.inputBorder,
     },
@@ -101,18 +97,25 @@ const getThemedStyles = (theme: any) =>
     verticalDivider: {
       width: 0.5,
       height: '100%',
-      backgroundColor: theme.border,
+      backgroundColor: theme.inputBorder,
       marginHorizontal: 8,
+    },
+    filterButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 8,
+      width: screenWidth * 0.3, // 30% of screen width
     },
     dropdown: {
       position: 'absolute',
       top: 90,
-      right: 10,
+      right: screenWidth * 0.05, // align with margin
       borderRadius: 8,
       borderWidth: 0.5,
       padding: 12,
-      width: '50%',
-      backgroundColor: theme.card, // change to theme.dropdown if defined
+      width: screenWidth * 0.6, // 60% of screen width
+      backgroundColor: theme.text,
       borderColor: theme.border,
       zIndex: 1000,
       elevation: 10,

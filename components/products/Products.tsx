@@ -1,13 +1,14 @@
 import { Colors } from '@/constants/Colors';
 import { Feather } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, useColorScheme, } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, useColorScheme, useWindowDimensions, } from 'react-native';
 import { Card } from '../common/ProductCard';
 import { SearchBar } from '../common/SearchBar';
 import { ThemedView } from '../ThemedView';
 import { ThemedText } from '../ThemedText';
 import { CustomOutlineButton } from '../ui/CustomOutlineButton';
 import { router } from 'expo-router';
+import { Platform } from 'react-native';
 
 
 const productData = [
@@ -81,6 +82,7 @@ export default function Products() {
      const colorScheme = useColorScheme();
       const theme = Colors[colorScheme ?? 'light'];
        const [filterOpen, setFilterOpen] = useState(false);
+        const { width } = useWindowDimensions();
 
   const toggleFilter = () => {
     setFilterOpen(!filterOpen);
@@ -92,6 +94,9 @@ export default function Products() {
   'Categories',
   'Rating',
 ];
+const numColumns = width > 768 ? 3 : width > 480 ? 2 : 1;
+  const cardWidth = (width - 60 - (numColumns - 1) * 16) / numColumns; // 60 is padding
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Header */}
@@ -100,14 +105,16 @@ export default function Products() {
       {/* Product Cards in Grid */}
       <ThemedView style={styles.gridContainer}>
         {productData.map((item) => (
-          <ThemedView key={item.id} style={styles.cardWrapper}>
+          <ThemedView key={item.id} style={[styles.cardWrapper, { width: cardWidth }]}>
             <Card
               image={item.image}
               title={item.title}
               favorites={item.favorites}
               amount={item.amount}
               stock={item.stock}
-              onPress={() => router.push({ pathname: '/product/[id]', params: { id: String(item.id) } })}
+              onPress={() =>
+                router.push({ pathname: '/product/[id]', params: { id: String(item.id) } })
+              }
             />
           </ThemedView>
         ))}
@@ -125,8 +132,8 @@ export default function Products() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 30,
-    paddingVertical: 32,
+     paddingTop: Platform.OS === 'android' ? 32 : 40,
+    paddingBottom: 60,
   },
   headerRow: {
     flexDirection: 'row',
@@ -150,8 +157,9 @@ const styles = StyleSheet.create({
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingVertical:40
+    justifyContent: 'center',
+    paddingVertical:40,
+    margin:8
   },
   cardWrapper: {
     width: '48%',

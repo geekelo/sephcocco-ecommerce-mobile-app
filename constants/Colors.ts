@@ -31,7 +31,7 @@ export const Colors = {
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
     orange:'#F93A01',
-      inputBorder:'rgba(255, 255, 255, 0.66)',
+       inputBorder:'rgba(255, 255, 255, 0.9)',
       success:'#16642B',
       placeholder:'rgba(255, 255, 255, 0.63)',
       gray:'	#222222',

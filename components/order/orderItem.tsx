@@ -5,6 +5,7 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
@@ -13,6 +14,8 @@ import { Checkbox } from '../ui/checker';
 import { Order } from '../types/types';
 import { Ionicons } from '@expo/vector-icons';
 
+
+const { width, height } = Dimensions.get('window');
 interface OrderItemProps {
   order: Order;
   index: number;
@@ -121,17 +124,20 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 4,
     elevation: 1,
+
+   
   },
   imageContainer: {
     width: '100%',
     aspectRatio: 1.5,
     
   },
-  image: {
-    width: '100%',
-    height: 300,
-    resizeMode: 'cover',
-  },
+ image: {
+  width: '100%',
+  height: width * 0.5, // 50% of screen width
+  resizeMode: 'cover',
+},
+
   checkboxContainer: {
     position: 'absolute',
     top: 12,
