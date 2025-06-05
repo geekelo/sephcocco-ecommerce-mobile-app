@@ -20,7 +20,7 @@ export default function SigninScreen() {
 
   const handleLogin = () => {
     if (!email ) {
-      Alert.alert('Missing Fields', 'Please enter email');
+      Alert.alert('Missing Fields', 'Please enter email and password');
       return;
     }
 
@@ -31,6 +31,7 @@ export default function SigninScreen() {
           const { user, token } = data;
           console.log('Login successful:', user, token);
            Alert.alert('User Logged in Successfully');
+          // TODO: Save token in secure storage
           router.push('/storeSelection');
         },
         onError: (error: any) => {
