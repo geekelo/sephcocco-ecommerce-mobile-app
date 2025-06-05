@@ -68,7 +68,7 @@ export default function SigninScreen() {
         />
         <Text style={[styles.loginText, { color: theme.text }]}>
           Don’t have an account?{' '}
-          <Link style={[styles.loginLink, { color: theme.success }]} href="/">
+          <Link style={[styles.loginLink, { color: theme.success }]} href="/signup">
             Sign up
           </Link>
         </Text>
