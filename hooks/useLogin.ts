@@ -7,19 +7,20 @@ type LoginPayload = {
   email: string;
 };
 
-const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL;
+const API_BASE_URL =
+  Constants.expoConfig?.extra?.API_BASE_URL ??
+  Constants.manifest?.extra?.API_BASE_URL;
+
+console.log("API_BASE_URL:", API_BASE_URL);
 
 export const useLogin = () => {
   return useMutation({
     mutationFn: async ({ email }: LoginPayload) => {
-      const response = await axios.post(
-        `${API_BASE_URL}/api/v1/login`,
-        {
-          user: {
-            email,
-          },
-        }
-      );
+      const response = await axios.post(`${API_BASE_URL}/login`, {
+        user: {
+          email,
+        },
+      });
 
       const { token, user } = response.data;
 
