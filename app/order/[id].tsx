@@ -24,7 +24,7 @@ const OrderDetails = () => {
   
   return (
     <Layout>
-    <View style={[styles.container, {backgroundColor:theme.text}]} >
+    <View style={[styles.container, {backgroundColor:theme.background}]} >
       {/* Navigation */}
       <View style={styles.nav}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton} activeOpacity={0.7}>

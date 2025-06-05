@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { Order } from '../types/types';
-import { OrderStatusBadge } from './orderStatus';
-import { Checkbox } from '../ui/checker';
+import React from "react";
+import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { Order } from "../types/types";
+import { OrderStatusBadge } from "./orderStatus";
+import { Checkbox } from "../ui/checker";
 
 type PendingOrderItemProps = {
   order: Order;
@@ -54,19 +54,19 @@ export const PendingOrderItem: React.FC<PendingOrderItemProps> = ({
           size={24}
         />
       </TouchableOpacity>
-
       <Image source={{ uri: order.image }} style={styles.image} />
-
       <View style={styles.content}>
         <View style={styles.info}>
-          <Text style={styles.name}>{order.name}</Text>
+          <Text style={styles.name} numberOfLines={1}>
+            {order.name}
+          </Text>
           <Text style={styles.statusText}>Status: {order.status}</Text>
           <OrderStatusBadge status={order.status} />
         </View>
 
         <View style={styles.details}>
           <View style={styles.quantityContainer}>
-            <Text style={styles.quantityLabel}>Quantity:</Text>
+            <Text style={styles.quantityLabel}>Qty:</Text>
             <View style={styles.quantityControls}>
               <TouchableOpacity
                 style={styles.qtyBtn}
@@ -94,7 +94,7 @@ export const PendingOrderItem: React.FC<PendingOrderItemProps> = ({
 
           <View style={styles.priceContainer}>
             <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Unit Price:</Text>
+              <Text style={styles.priceLabel}>Unit:</Text>
               <Text style={styles.priceValue}>${order.price.toFixed(2)}</Text>
             </View>
             <View style={[styles.priceRow, styles.totalRow]}>
@@ -109,95 +109,105 @@ export const PendingOrderItem: React.FC<PendingOrderItemProps> = ({
     </TouchableOpacity>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
-    alignItems: 'center',
+    alignItems: "flex-start",
+    backgroundColor: "#fff",
+    flexWrap: "wrap",
   },
   selected: {
-    borderColor: '#32CD32',
-    backgroundColor: '#e6f4ea',
+    borderColor: "#32CD32",
+    backgroundColor: "#e6f4ea",
   },
   checked: {
-    backgroundColor: '#a5d6a7',
+    backgroundColor: "#a5d6a7",
   },
   image: {
     width: 64,
     height: 64,
     borderRadius: 8,
-    marginLeft: 12,
-    marginRight: 12,
+    marginHorizontal: 12,
   },
   content: {
     flex: 1,
+    minWidth: 0,
   },
   info: {
     marginBottom: 8,
   },
   name: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontWeight: "600",
+    color: "#000",
+    flexShrink: 1,
   },
   statusText: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   details: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
   },
   quantityContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 10,
+    minWidth: 120,
+    marginTop: 4,
   },
   quantityLabel: {
     marginRight: 8,
     fontSize: 14,
-    color: '#333',
+    color: "#333",
   },
   quantityControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   qtyBtn: {
     padding: 6,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 4,
   },
   quantityValue: {
     marginHorizontal: 10,
     fontSize: 14,
     minWidth: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   priceContainer: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
+    flex: 1,
+    minWidth: 120,
+    marginTop: 4,
   },
   priceRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
   priceLabel: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginRight: 6,
   },
   priceValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   totalRow: {
     marginTop: 4,
   },
   totalValue: {
-    color: '#32CD32',
+    color: "#32CD32",
   },
 });

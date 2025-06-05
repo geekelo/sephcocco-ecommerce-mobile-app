@@ -24,25 +24,25 @@ export default function Footer() {
       <View style={[styles.borderBottom, { borderBottomColor: theme.gray }]} />
 
       {/* Footer Content */}
-      <ThemedView style={[styles.footerContent, { backgroundColor: theme.text }]}>
+      <ThemedView style={[styles.footerContent, { backgroundColor: theme.text}]}>
         <View style={styles.leftColumn}>
           <Link href="/ProductPage" asChild>
-            <ThemedText fontFamily="Raleway-Regular" type="defaultSemiBold" style={[styles.heading, { color: theme.background }]}>
+            <ThemedText fontFamily="Raleway-Regular" lightColor='#fff'  darkColor='#000' type="defaultSemiBold" style={[styles.heading, { color: theme.text}]}>
               Products
             </ThemedText>
           </Link>
           <Link href="/order" asChild>
-            <ThemedText fontFamily="Raleway-Regular" type="defaultSemiBold" style={[styles.heading, { color: theme.background }]}>
+            <ThemedText fontFamily="Raleway-Regular" lightColor='#fff'  darkColor='#000'  type="defaultSemiBold" style={[styles.heading, { color: theme.background }]}>
               Order
             </ThemedText>
           </Link>
           <Link href="/message" asChild>
-            <ThemedText fontFamily="Raleway-Regular" type="defaultSemiBold" style={[styles.heading, { color: theme.background }]}>
+            <ThemedText fontFamily="Raleway-Regular" lightColor='#fff'  darkColor='#000'  type="defaultSemiBold" style={[styles.heading, { color: theme.background }]}>
               Messages
             </ThemedText>
           </Link>
           <Link href="/message" asChild>
-            <ThemedText fontFamily="Raleway-Regular" type="defaultSemiBold" style={[styles.heading, { color: theme.background }]}>
+            <ThemedText fontFamily="Raleway-Regular" lightColor='#fff'  darkColor='#000'  type="defaultSemiBold" style={[styles.heading, { color: theme.background }]}>
               FAQ
             </ThemedText>
           </Link>
@@ -50,17 +50,17 @@ export default function Footer() {
 
         <View style={styles.rightColumn}>
           <Link href="/restaurant" asChild>
-            <ThemedText fontFamily="Raleway-Regular" type="defaultSemiBold" style={[styles.heading, { color: theme.background }]}>
+            <ThemedText fontFamily="Raleway-Regular"  lightColor='#fff'  darkColor='#000'  type="defaultSemiBold" style={[styles.heading, { color: theme.background }]}>
               Restaurant
             </ThemedText>
           </Link>
           <Link href="/lounge" asChild>
-            <ThemedText fontFamily="Raleway-Regular" type="defaultSemiBold" style={[styles.heading, { color: theme.background }]}>
+            <ThemedText fontFamily="Raleway-Regular" lightColor='#fff'  darkColor='#000'  type="defaultSemiBold" style={[styles.heading, { color: theme.background }]}>
               Lounge
             </ThemedText>
           </Link>
           <Link href="/pharmacy" asChild>
-            <ThemedText fontFamily="Raleway-Regular" type="defaultSemiBold" style={[styles.heading, { color: theme.background }]}>
+            <ThemedText fontFamily="Raleway-Regular" lightColor='#fff'  darkColor='#000'  type="defaultSemiBold" style={[styles.heading, { color: theme.background }]}>
               Pharmacy
             </ThemedText>
           </Link>
@@ -95,7 +95,8 @@ export default function Footer() {
 
 const styles = StyleSheet.create({
   footerContainer: {
-    padding: 50,
+    padding: 20,
+   
   },
   footerImage: {
     width: 100,
@@ -136,7 +137,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
    alignItems:'center',
     gap: 15,
-    paddingTop:12
+    paddingTop:12,
+    paddingBottom:30
   },
   icon: {
     padding: 10,

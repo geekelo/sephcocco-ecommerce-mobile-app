@@ -5,12 +5,18 @@ import {
   StyleSheet,
   Image,
   useColorScheme,
+  Dimensions,
 } from "react-native";
 import { Entypo, Feather } from "@expo/vector-icons";
 import { ThemedText } from "../ThemedText";
 import { ThemedView } from "../ThemedView";
 import { Colors } from "@/constants/Colors";
 import { Link } from "expo-router";
+
+
+const windowHeight = Dimensions.get('window').height;
+
+const windowWidth = Dimensions.get("window").width;
 
 export function NavBar() {
   const colorScheme = useColorScheme();
@@ -204,31 +210,34 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   sidebar: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "75%",
-    height: 850,
-    padding: 40,
-    zIndex: 10,
-    borderTopRightRadius: 24,
-    borderBottomRightRadius: 24,
-    elevation: 1,
-  },
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  width: '75%',
+  height: windowHeight * 0.98, // 90% of the screen height
+  padding: 40,
+  zIndex: 10,
+  borderTopRightRadius: 24,
+  borderBottomRightRadius: 24,
+  elevation: 1,
+},
+
   sidebarText: {
     paddingVertical: 20,
     borderBottomWidth: 0.4,
     zIndex: 10,
   },
   imageFrame: {
-    width: 221,
-    height: 226, // Set the height of the image frame
-    marginVertical: 20, // Add some space around the image frame
-    position: "absolute", // To make it overlay under the items
-    top: 60,
-    left: "30%",
-    zIndex: -1,
-  },
+  width: 221,
+  height: 226,
+  marginVertical: 20,
+  position: "absolute",
+  top: 60,
+  left: "50%",
+  zIndex: -1,
+  transform: [{ translateX: -141 / 2 }], // shift left by half width to center
+},
+
   dropdownContainer: {
     paddingVertical: 7,
   },

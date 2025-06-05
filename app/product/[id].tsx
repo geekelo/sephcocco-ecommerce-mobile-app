@@ -20,7 +20,9 @@ import { CustomOutlineButton } from "@/components/ui/CustomOutlineButton";
 import {  Ionicons } from "@expo/vector-icons";
 import { StarRating } from "@/components/common/ratingCard";
 import SimilarProducts from "@/components/products/similarProducts";
+import { Dimensions } from "react-native";
 
+const { width } = Dimensions.get("window");
 type SimilarProduct = {
   id: number;
   image: any;
@@ -164,7 +166,7 @@ export default function ProductDetail() {
               style={{
                 backgroundColor: theme.pink,
                 paddingVertical: 24,
-                width: "50%",
+                width: "45%",
               }}
               textStyle={{ color: "#333" }}
             />
@@ -173,7 +175,7 @@ export default function ProductDetail() {
                 router.push("/Billing");
               }}
               text="Buy Now"
-              style={{ paddingVertical: 24, width: "50%" }}
+              style={{ paddingVertical: 24, width: "45%" }}
             />
           </ThemedView>
           {/* Similar Products */}
@@ -203,10 +205,18 @@ export default function ProductDetail() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 30,
+    padding: width * 0.05,
     paddingBottom: 100,
     gap: 8,
   },
+
+  images: {
+    width: "100%",
+    height: width * 0.9,
+    resizeMode: "contain",
+    marginBottom: 20,
+  },
+
   subImageContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -215,70 +225,67 @@ const styles = StyleSheet.create({
   },
 
   subImage: {
-    width: "23%", // ~ (100% - 3*gap(4%)) / 4 = about 23%
-    aspectRatio: 1, // square images
+    width: "23%", // roughly 4 in a row with space
+    aspectRatio: 1,
     borderRadius: 10,
     resizeMode: "contain",
     marginBottom: 10,
     borderWidth: 0.5,
-    borderColor: "#F93A01",
   },
 
-  images: {
-    aspectRatio: 1,
-  },
   title: {
-    fontSize: 27,
-    fontWeight: 600,
+    fontSize: width * 0.06, // ~24-27 on normal screens
+    fontWeight: "600",
     paddingBottom: 6,
   },
+
   amount: {
-    fontSize: 18,
-    fontWeight: 600,
+    fontSize: width * 0.045,
+    fontWeight: "600",
     marginBottom: 6,
   },
+
   discount: {
-    fontSize: 14,
+    fontSize: width * 0.035,
     color: "green",
     marginBottom: 6,
   },
+
   stock: {
-    fontSize: 15,
+    fontSize: width * 0.04,
+    fontWeight: "600",
     marginBottom: 4,
-    fontWeight: 600,
-  },
-  rating: {
-    fontSize: 13,
-    marginBottom: 10,
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 20,
   },
 
   descriptionheader: {
-    fontSize: 15,
+    fontSize: width * 0.04,
     textDecorationLine: "underline",
-    fontWeight: 600,
-    paddingBottom: 6,
+    fontWeight: "600",
+    paddingBottom: 12,
+  },
+
+  description: {
+    fontSize: width * 0.038,
+    lineHeight: 30,
+    marginBottom: 20,
+
+  },
+
+  btns: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 10,
+    marginVertical: 10,
   },
 
   bottomOutlineButton: {
     width: "100%",
     alignSelf: "center",
-    marginTop: 10,
+    marginTop: 20,
   },
 
-  btns: {
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 20,
-    flex: 1,
-  },
   row: {
-    display: "flex",
     flexDirection: "row",
     gap: 6,
     alignItems: "center",
