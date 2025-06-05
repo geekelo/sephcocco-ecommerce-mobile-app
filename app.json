@@ -46,7 +46,7 @@
       "eas": {
         "projectId": "440bedb9-d66d-476c-9085-501174ac315e"
       },
-       "API_URL": "https://sephcocco-lounge-api.onrender.com/api/v1"
+       "API_BASE_URL": "https://sephcocco-lounge-api.onrender.com/api/v1"
     }
   }
 }
