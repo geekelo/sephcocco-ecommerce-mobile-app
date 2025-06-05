@@ -1,17 +1,19 @@
-// hooks/useLogin.ts
-import { useMutation } from '@tanstack/react-query';
-import axios from 'axios';
-import { saveToken, saveUser } from '@/lib/tokenStorage';
+import { useMutation } from "@tanstack/react-query";
+import axios from "axios";
+import Constants from "expo-constants";
+import { saveToken, saveUser } from "@/lib/tokenStorage";
 
 type LoginPayload = {
   email: string;
 };
 
+const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL;
+
 export const useLogin = () => {
   return useMutation({
     mutationFn: async ({ email }: LoginPayload) => {
       const response = await axios.post(
-        'https://sephcocco-lounge-api.onrender.com/api/v1/login',
+        `${API_BASE_URL}/api/v1/login`,
         {
           user: {
             email,
