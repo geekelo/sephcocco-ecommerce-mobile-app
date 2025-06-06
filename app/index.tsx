@@ -18,7 +18,7 @@ const SplashScreen = () => {
 
     // Navigate after 6 seconds
     const timeout = setTimeout(() => {
-      router.replace('/signIn');
+      router.replace('/auth/forgotPassword');
     }, 6000);
 
     return () => clearTimeout(timeout);

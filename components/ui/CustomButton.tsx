@@ -26,7 +26,7 @@ const CustomButton: React.FC<Props> = ({ text, onPress, style, textStyle, disabl
     <TouchableOpacity
       style={[
         styles.button,
-        { backgroundColor: disabled ? '#ccc' : theme.orange },
+        { backgroundColor: disabled ? theme.placeholder : theme.orange },
         disabled && styles.disabledButton,
         style,
       ]}
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   disabledButton: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   disabledText: {
     color: '#eee',
