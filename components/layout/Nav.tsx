@@ -11,41 +11,77 @@ import { Entypo, Feather } from "@expo/vector-icons";
 import { ThemedText } from "../ThemedText";
 import { ThemedView } from "../ThemedView";
 import { Colors } from "@/constants/Colors";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router"; // added useRouter for navigation
+import { useOutlet } from "@/context/outletContext";
+import { Routes } from "@/routes";
 
-
-const windowHeight = Dimensions.get('window').height;
-
+const windowHeight = Dimensions.get("window").height;
 const windowWidth = Dimensions.get("window").width;
+
+type Outlet = "restaurant" | "pharmacy" | "lounge";
 
 export function NavBar() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? "light"];
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false); 
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const { activeOutlet, setActiveOutlet } = useOutlet();
+
+  const router = useRouter();
 
   const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
+    setSidebarOpen((prev) => !prev);
+    if (dropdownOpen) setDropdownOpen(false); // close dropdown if sidebar closes
   };
 
   const toggleDropdown = () => {
-    setDropdownOpen(!dropdownOpen);
+    setDropdownOpen((prev) => !prev);
+  };
+
+  const handleOutletChange = (outlet: Outlet) => {
+    setActiveOutlet(outlet);
+    setSidebarOpen(false);
+    setDropdownOpen(false);
+    router.push(`/${outlet}`);
   };
 
   return (
     <ThemedView
-      style={[styles.navBarContainer, { backgroundColor: "#ffead1" }]}
+      style={[
+        styles.navBarContainer,
+        { backgroundColor: "#ffead1", borderBottomColor: theme.border, borderBottomWidth: 1 },
+      ]}
     >
       {/* Logo */}
       <View style={styles.logoContainer}>
         <Image
           source={require("@/assets/images/SEPHCOCO LOUNGE 3.png")}
           style={styles.logo}
+          resizeMode="contain"
+          accessible
+          accessibilityLabel="App Logo"
         />
       </View>
 
+      {/* Login Link */}
+      <Link
+        href={Routes.auth.login}
+        style={[styles.loginLink, { borderBottomColor: theme.orange }]}
+        asChild
+      >
+        <ThemedText type="default" style={{ color: theme.text }}>
+          Login
+        </ThemedText>
+      </Link>
+
       {/* Hamburger Icon */}
-      <TouchableOpacity onPress={toggleSidebar} style={styles.hamburgerIcon}>
+      <TouchableOpacity
+        onPress={toggleSidebar}
+        style={styles.hamburgerIcon}
+        accessibilityLabel={sidebarOpen ? "Close menu" : "Open menu"}
+        accessibilityRole="button"
+      >
         {sidebarOpen ? (
           <Entypo name="cross" size={30} color={theme.text} />
         ) : (
@@ -59,92 +95,71 @@ export function NavBar() {
           <Image
             source={require("@/assets/images/SEPHCOCO LOUNGE 3.png")}
             style={styles.logobox}
+            resizeMode="contain"
+            accessible
+            accessibilityLabel="Sidebar Logo"
           />
+
           <Link
             href="/ProductPage"
-            style={[
-              styles.sidebarText,
-              { color: theme.text, borderBottomColor: theme.border },
-            ]}
+            style={[styles.sidebarText, { color: theme.text, borderBottomColor: theme.border }]}
             asChild
           >
             <ThemedText type="default">Products</ThemedText>
           </Link>
 
-          {/* Image frame between Products and Pending Orders */}
           <Image
-            source={require("@/assets/images/Frame 1321317696.png")} 
-            style={[styles.imageFrame, { zIndex: -1 }]} 
+            source={require("@/assets/images/Frame 1321317696.png")}
+            style={styles.imageFrame}
+            resizeMode="contain"
+            accessible={false}
           />
 
-           <Link
+          <Link
             href="/pendingOrder"
-            style={[
-              styles.sidebarText,
-              { color: theme.text, borderBottomColor: theme.border },
-            ]}
+            style={[styles.sidebarText, { color: theme.text, borderBottomColor: theme.border }]}
             asChild
           >
-
-          <ThemedText
-            type="default"
-            
-          >
-            Pending
-          </ThemedText>
-          </Link>
-          <ThemedText
-            type="default"
-            style={[
-              styles.sidebarText,
-              { color: theme.text, borderBottomColor: theme.border },
-            ]}
-          >
-            Completed
-          </ThemedText>
-           <Link
-            href="/paymentHistory"
-            style={[
-              styles.sidebarText,
-              { color: theme.text, borderBottomColor: theme.border },
-            ]}
-            asChild
-          >
-          <ThemedText
-            type="default"
-            style={[
-              styles.sidebarText,
-              { color: theme.text, borderBottomColor: theme.border },
-            ]}
-          >
-            Payment History
-          </ThemedText>
-          </Link>
-           <Link
-            href="/message"
-            style={[
-              styles.sidebarText,
-              { color: theme.text, borderBottomColor: theme.border },
-            ]}
-            asChild
-          >
-          <ThemedText
-            type="default"
-          
-          >
-            Messages
-          </ThemedText>
+            <ThemedText type="default">Pending</ThemedText>
           </Link>
 
-          {/* Store Dropdown */}
-          <View
+          <TouchableOpacity
+            onPress={() => {}}
             style={[styles.sidebarText, { borderBottomColor: theme.border }]}
+            accessibilityRole="button"
+            accessible
+            accessibilityLabel="Completed Orders"
           >
+            <ThemedText type="default" style={{ color: theme.text }}>
+              Completed
+            </ThemedText>
+          </TouchableOpacity>
+
+          <Link
+            href="/paymentHistory"
+            style={[styles.sidebarText, { color: theme.text, borderBottomColor: theme.border }]}
+            asChild
+          >
+            <ThemedText type="default">Payment History</ThemedText>
+          </Link>
+
+          <Link
+            href="/message"
+            style={[styles.sidebarText, { color: theme.text, borderBottomColor: theme.border }]}
+            asChild
+          >
+            <ThemedText type="default">Messages</ThemedText>
+          </Link>
+
+          {/* Stores Dropdown */}
+          <View style={[styles.sidebarText, { borderBottomColor: theme.border }]}>
             <TouchableOpacity
               onPress={toggleDropdown}
-              style={[styles.storeButton]}
+              style={styles.storeButton}
+              accessibilityRole="button"
+              accessibilityLabel={dropdownOpen ? "Collapse stores list" : "Expand stores list"}
             >
-              <ThemedText type="default" style={[{ color: theme.text }]}>
+              <ThemedText type="default" style={{ color: theme.text }}>
                 Stores
               </ThemedText>
               <Entypo
@@ -156,29 +171,43 @@ export function NavBar() {
 
             {dropdownOpen && (
               <View style={styles.dropdownContainer}>
-                <TouchableOpacity style={styles.dropdownItem}>
-                  <ThemedText type="default" style={{ color: theme.text }}>
-                    Restaurant
-                  </ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.dropdownItem}>
-                  <ThemedText type="default" style={{ color: theme.text }}>
-                    Pharmacy
-                  </ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.dropdownItem}>
-                  <ThemedText type="default" style={{ color: theme.text }}>
-                    Lounge
-                  </ThemedText>
-                </TouchableOpacity>
+                {(["restaurant", "pharmacy", "lounge"] as Outlet[]).map((store) => (
+                  <TouchableOpacity
+                    key={store}
+                    style={styles.dropdownItem}
+                    onPress={() => handleOutletChange(store)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: activeOutlet === store }}
+                  >
+                    <ThemedText
+                      type="default"
+                      style={{
+                        color: activeOutlet === store ? theme.orange : theme.text,
+                        fontWeight: activeOutlet === store ? "bold" : "normal",
+                      }}
+                    >
+                      {store.charAt(0).toUpperCase() + store.slice(1)}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
           </View>
+
+          {/* Bottom Icons */}
           <View style={styles.bottomIcons}>
-            <TouchableOpacity style={styles.iconItem}>
+            <TouchableOpacity
+              style={styles.iconItem}
+              accessibilityRole="button"
+              accessibilityLabel="Logout"
+            >
               <Feather name="log-out" size={30} color={theme.text} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconItem}>
+            <TouchableOpacity
+              style={styles.iconItem}
+              accessibilityRole="button"
+              accessibilityLabel="User profile"
+            >
               <Feather name="user" size={30} color={theme.text} />
             </TouchableOpacity>
           </View>
@@ -192,82 +221,82 @@ const styles = StyleSheet.create({
   navBarContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    alignItems: "center",
   },
   logoContainer: {
     flex: 1,
-  },
-  logobox: {
-    width: 39,
-    height: 39,
-    marginVertical: 40,
   },
   logo: {
     width: 43,
     height: 43,
   },
+  loginLink: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderBottomWidth: 0.4,
+
+  },
   hamburgerIcon: {
     padding: 10,
   },
   sidebar: {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width: '75%',
-  height: windowHeight * 0.98, // 90% of the screen height
-  padding: 40,
-  zIndex: 10,
-  borderTopRightRadius: 24,
-  borderBottomRightRadius: 24,
-  elevation: 1,
-},
-
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: windowWidth * 0.75,
+    height: windowHeight,
+    paddingTop: 60,
+    paddingHorizontal: 30,
+    zIndex: 100,
+    borderTopRightRadius: 24,
+    borderBottomRightRadius: 24,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+  },
+  logobox: {
+    width: 39,
+    height: 39,
+    marginBottom: 40,
+  },
   sidebarText: {
-    paddingVertical: 20,
+    paddingVertical: 16,
     borderBottomWidth: 0.4,
-    zIndex: 10,
   },
   imageFrame: {
-  width: 221,
-  height: 226,
-  marginVertical: 20,
-  position: "absolute",
-  top: 60,
-  left: "50%",
-  zIndex: -1,
-  transform: [{ translateX: -141 / 2 }], // shift left by half width to center
-},
-
+    width: 220,
+    height: 220,
+    position: "absolute",
+    top: 90,
+    left: windowWidth * 0.75 / 2 - 110,
+    zIndex: -1,
+  },
   dropdownContainer: {
-    paddingVertical: 7,
+    paddingVertical: 8,
   },
   dropdownItem: {
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   storeButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    display: "flex",
     justifyContent: "space-between",
+    paddingVertical: 10,
   },
   bottomIcons: {
     position: "absolute",
     bottom: 60,
     left: 40,
-    gap: 40,
-    display: "flex",
     flexDirection: "row",
+    gap: 40,
   },
-
   iconItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-  },
-
-  iconText: {
-    color: "#fff",
-    fontSize: 16,
   },
 });

@@ -68,10 +68,15 @@ export default function SigninScreen() {
         />
         <Text style={[styles.loginText, { color: theme.text }]}>
           Don’t have an account?{' '}
-          <Link style={[styles.loginLink, { color: theme.success }]} href="/signup">
+          <Link style={[styles.loginLink, { color: theme.success }]} href="/auth/signup">
             Sign up
           </Link>
-        </Text>
+          </Text>
+          
+          <Link style={[styles.loginLink, { color: '#880808', textAlign:'center'}]} href="/auth/forgotPassword">
+            Forgot Password?
+          </Link>
+        
       </View>
     </ThemedView>
   );

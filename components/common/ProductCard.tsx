@@ -4,6 +4,8 @@ import { Feather, AntDesign } from '@expo/vector-icons';
 import { ThemedView } from '../ThemedView';
 import { ThemedText } from '../ThemedText';
 import { Colors } from '@/constants/Colors';
+import { Alert } from 'react-native';
+
 
 interface ProductCardProps {
   image: any;
@@ -11,7 +13,10 @@ interface ProductCardProps {
   favorites: number;
   amount: string;
   stock: number;
+  outlet?: string; 
   onPress?: () => void;
+  isLoggedIn: boolean; // <-- new prop to track login status
+  onLoginPrompt?: () => void; // optional callback if you want to handle login flow externally
 }
 
 export function Card({
@@ -20,52 +25,78 @@ export function Card({
   favorites,
   amount,
   stock,
+  outlet,
   onPress,
+  isLoggedIn,
+  onLoginPrompt,
 }: ProductCardProps) {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
 
-  return (
-    <ThemedView style={[styles.card, ]}>
-<ThemedView style={{padding:8}}>
-      <Image source={image} style={styles.image} />
+  const handlePress = () => {
+    if (stock === 0) return; // do nothing if out of stock
 
-      <ThemedView style={styles.rowBetween}>
-        <ThemedText style={styles.title} fontFamily='Raleway-Regular'>{title}</ThemedText>
-        <ThemedView style={styles.favContainer}>
-          <AntDesign name="hearto" size={10} color={theme.orange} />
-          <ThemedText style={styles.favText} fontFamily='Raleway-Regular'>{favorites}</ThemedText>
+    if (!isLoggedIn) {
+      // Show alert prompt or call external login handler if provided
+      if (onLoginPrompt) {
+        onLoginPrompt();
+      } else {
+        Alert.alert(
+          "Login Required",
+          "Please login or sign up to place an order.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Login", onPress: () => console.log("Navigate to Login Screen") }
+          ]
+        );
+      }
+      return;
+    }
+
+    if (onPress) onPress();
+  };
+
+  return (
+    <ThemedView style={[styles.card]}>
+      <ThemedView style={{ padding: 8 }}>
+        <Image source={image} style={styles.image} />
+
+        <ThemedView style={styles.rowBetween}>
+          <ThemedText style={styles.title} fontFamily="Raleway-Regular">{title}</ThemedText>
+  
+          <ThemedView style={styles.favContainer}>
+            <AntDesign name="hearto" size={10} color={theme.orange} />
+            <ThemedText style={styles.favText} fontFamily="Raleway-Regular">{favorites}</ThemedText>
+          </ThemedView>
+        </ThemedView>
+
+        <ThemedView style={styles.rowBetween}>
+          <ThemedText style={styles.amount} fontFamily="Raleway-Regular">{amount}</ThemedText>
+        </ThemedView>
+        <ThemedView style={styles.rowBetween}>
+          <ThemedText style={[styles.amount, { color: theme.success }]} fontFamily="Raleway-Regular">In stock</ThemedText>
+          <ThemedText style={styles.stockText} fontFamily="Raleway-Regular"> {stock} items</ThemedText>
         </ThemedView>
       </ThemedView>
 
-      <ThemedView style={styles.rowBetween}>
-        <ThemedText style={styles.amount} fontFamily='Raleway-Regular'>{amount}</ThemedText>
-      
-      </ThemedView>
-       <ThemedView style={styles.rowBetween}>
-        <ThemedText style={[styles.amount, {color:theme.success}]} fontFamily='Raleway-Regular'>In stock</ThemedText>
-        <ThemedText style={styles.stockText} fontFamily='Raleway-Regular'> {stock} items</ThemedText>
-      </ThemedView>
-      </ThemedView>
-<TouchableOpacity
-  style={[
-    styles.button,
-    {
-      backgroundColor: stock === 0 ? theme.gray : theme.orange,
-      opacity: stock === 0 ? 0.6 : 1,
-    },
-  ]}
-  onPress={onPress}
-  disabled={stock === 0}
->
-  <ThemedText
-    style={[styles.buttonText, { color: theme.background }]}
-    fontFamily="Raleway-Regular"
-  >
-    {stock === 0 ? 'Out of Stock' : 'Place Order'}
-  </ThemedText>
-</TouchableOpacity>
-
+      <TouchableOpacity
+        style={[
+          styles.button,
+          {
+            backgroundColor: stock === 0 ? theme.gray : theme.orange,
+            opacity: stock === 0 ? 0.6 : 1,
+          },
+        ]}
+        onPress={handlePress}
+        disabled={stock === 0}
+      >
+        <ThemedText
+          style={[styles.buttonText, { color: theme.background }]}
+          fontFamily="Raleway-Regular"
+        >
+          {stock === 0 ? 'Out of Stock' : 'Place Order'}
+        </ThemedText>
+      </TouchableOpacity>
     </ThemedView>
   );
 }
