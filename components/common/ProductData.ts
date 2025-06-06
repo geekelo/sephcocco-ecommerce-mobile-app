@@ -1,6 +1,7 @@
 export const productData = [
   {
     id: 1,
+     outlet: 'lounge',
     image: require('@/assets/images/image(1).png'),
     subImages: [
       require('@/assets/images/image(1).png'),
@@ -17,6 +18,7 @@ export const productData = [
     similar: [
       {
         id: 4,
+         outlet: 'lounge',
         image: require('@/assets/images/image(1).png'),
         title: 'Floor Vase',
         favorites: 18,
@@ -25,6 +27,7 @@ export const productData = [
       },
       {
         id: 2,
+         outlet: 'lounge',
         image: require('@/assets/images/image(1).png'),
         title: 'Wooden Desk',
         favorites: 21,
@@ -33,6 +36,7 @@ export const productData = [
       },
        {
         id: 8,
+         outlet: 'lounge',
         image: require('@/assets/images/image(1).png'),
         title: 'Floor Vase',
         favorites: 18,
@@ -41,6 +45,7 @@ export const productData = [
       },
       {
         id: 1,
+         outlet: 'lounge',
         image: require('@/assets/images/image(1).png'),
         title: 'Wooden Desk',
         favorites: 21,
@@ -51,6 +56,7 @@ export const productData = [
   },
   {
     id: 2,
+     outlet: 'lounge',
     image: require('@/assets/images/image(1).png'),
     subImages: [
       require('@/assets/images/image(1).png'),
@@ -77,6 +83,7 @@ export const productData = [
   },
   {
     id: 3,
+     outlet: 'pharmacy',
     image: require('@/assets/images/image(1).png'),
     subImages: [
       require('@/assets/images/image(1).png'),
@@ -93,6 +100,7 @@ export const productData = [
     similar: [
       {
         id: 5,
+         outlet: 'lounge',
         image: require('@/assets/images/image(1).png'),
         title: 'Reading Lamp',
         favorites: 56,
@@ -103,6 +111,7 @@ export const productData = [
   },
   {
     id: 4,
+     outlet: 'lounge',
     image: require('@/assets/images/image(1).png'),
     subImages: [
       require('@/assets/images/image(1).png'),
@@ -119,6 +128,7 @@ export const productData = [
     similar: [
       {
         id: 6,
+         outlet: 'lounge',
         image: require('@/assets/images/image(1).png'),
         title: 'Floor Vase',
         favorites: 18,
@@ -129,6 +139,7 @@ export const productData = [
   },
   {
     id: 5,
+     outlet: 'lounge',
     image: require('@/assets/images/image(1).png'),
     subImages: [
       require('@/assets/images/image(1).png'),
@@ -145,6 +156,7 @@ export const productData = [
     similar: [
       {
         id: 3,
+         outlet: 'lounge',
         image: require('@/assets/images/image(1).png'),
         title: 'Reading Lamp',
         favorites: 56,
@@ -155,6 +167,7 @@ export const productData = [
   },
   {
     id: 6,
+     outlet: 'restaurant',
     image: require('@/assets/images/image(1).png'),
     subImages: [
       require('@/assets/images/image(1).png'),
@@ -171,6 +184,7 @@ export const productData = [
     similar: [
       {
         id: 1,
+         outlet: 'pharmacy',
         image: require('@/assets/images/image(1).png'),
         title: 'Modern Sofa',
         favorites: 34,
