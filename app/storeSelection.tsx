@@ -5,15 +5,18 @@ import { ThemedText } from '@/components/ThemedText';
 import { Colors } from '@/constants/Colors';
 import { router } from 'expo-router';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useOutlet } from '@/context/outletContext';
 
 export default function StoreSelectionScreen() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
 
+  const { setActiveOutlet } = useOutlet(); // ✅ access context setter
+
   const options = [
-    { title: 'Go to Pharmacy', icon: 'pharmacy.fill', href: '/pharmacy' },
-    { title: 'Go to Restaurant', icon: 'restaurant.fill', href: '/restaurant' },
-    { title: 'Go to Lounge', icon: 'lounge.fill', href: '/lounge' },
+    { title: 'Go to Pharmacy', icon: 'pharmacy.fill', href: '/pharmacy', key: 'pharmacy' },
+    { title: 'Go to Restaurant', icon: 'restaurant.fill', href: '/restaurant', key: 'restaurant' },
+    { title: 'Go to Lounge', icon: 'lounge.fill', href: '/lounge', key: 'lounge' },
   ];
 
   return (
@@ -24,23 +27,28 @@ export default function StoreSelectionScreen() {
           style={styles.logo}
         />
       </View>
+
       <ThemedText type="title" style={[styles.headerText, { color: theme.text }]}>
         Welcome to Sephcocco Outlet
       </ThemedText>
-       <ThemedText  style={[styles.text, {color: theme.gray }]}>
-       Please choose any of the Sephcocco outlets to place your orders.
-      </ThemedText>
-        <ThemedText  style={[styles.desc, { color: theme.borderorange}]}>
-       Always at your service
+
+      <ThemedText style={[styles.text, { color: theme.gray }]}>
+        Please choose any of the Sephcocco outlets to place your orders.
       </ThemedText>
 
+      <ThemedText style={[styles.desc, { color: theme.borderorange }]}>
+        Always at your service
+      </ThemedText>
 
       <View style={styles.options}>
         {options.map((item, index) => (
           <Pressable
             key={index}
-            style={[styles.optionButton, { borderColor: theme.borderorange}]}
-            onPress={() => router.push(item.href as any)}>
+            style={[styles.optionButton, { borderColor: theme.borderorange }]}
+            onPress={() => {
+              setActiveOutlet(item.key as 'pharmacy' | 'restaurant' | 'lounge'); // ✅ set outlet
+             router.push(item.href as any)
+            }}>
             <IconSymbol name={item.icon as any} size={22} color={theme.gray} />
             <Text style={[styles.optionTitle, { color: theme.text }]}>
               {item.title}
@@ -71,11 +79,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 22,
     fontFamily: 'PTSerif-Regular',
-    paddingTop:100
+    paddingTop: 100,
   },
   options: {
     gap: 20,
-    margin:30
+    margin: 30,
   },
   optionButton: {
     flexDirection: 'row',
@@ -84,27 +92,25 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     padding: 15,
     justifyContent: 'center',
-    
   },
   optionTitle: {
     fontSize: 18,
     fontFamily: 'PTSerif-Regular',
     flex: 1,
     marginLeft: 12,
-    fontWeight:500
+    fontWeight: '500',
   },
-  desc:{
-   
-    fontStyle:'italic',
-    fontSize:24,
-    fontWeight:600,
-    textAlign:'center',
-    padding:0,
-    margin:0,
-    
-  }, text:{
-    fontSize:20,
-    textAlign:'center',
-    lineHeight:30
-  }
+  desc: {
+    fontStyle: 'italic',
+    fontSize: 24,
+    fontWeight: '600',
+    textAlign: 'center',
+    padding: 0,
+    margin: 0,
+  },
+  text: {
+    fontSize: 20,
+    textAlign: 'center',
+    lineHeight: 30,
+  },
 });
