@@ -1,28 +1,43 @@
 import { Colors } from '@/constants/Colors';
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useColorScheme,
+  View,
+} from 'react-native';
 import { Card } from '../common/ProductCard';
 import { router } from 'expo-router';
 import { productData } from '../common/ProductData';
+type TopSellerProps = {
+  outlet?: string;
+  isLoggedIn: boolean;
+  onLoginPrompt?: () => void;
+};
 
-export default function TopSeller() {
-     const colorScheme = useColorScheme();
-      const theme = Colors[colorScheme ?? 'light'];
+export default function TopSeller({ outlet, isLoggedIn, onLoginPrompt }: TopSellerProps) {
+  const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme ?? 'light'];
+
+  const filteredProducts = outlet
+    ? productData.filter((item) => item.outlet === outlet)
+    : productData;
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Header */}
       <View style={styles.headerRow}>
-        <Text style={styles.headerText}>Top Sellers </Text>
+        <Text style={styles.headerText}>Top Sellers</Text>
         <TouchableOpacity style={styles.seeAll}>
-          <Text style={[styles.seeAllText, {color:theme.orange}]}>See All</Text>
+          <Text style={[styles.seeAllText, { color: theme.orange }]}>See All</Text>
           <Feather name="arrow-right" size={16} color={theme.orange} />
         </TouchableOpacity>
       </View>
 
-      {/* Product Cards in Grid */}
       <View style={styles.gridContainer}>
-        {productData.map((item) => (
+        {filteredProducts.map((item) => (
           <View key={item.id} style={styles.cardWrapper}>
             <Card
               image={item.image}
@@ -30,7 +45,15 @@ export default function TopSeller() {
               favorites={item.favorites}
               amount={item.amount}
               stock={item.stock}
-             onPress={() => router.push({ pathname: '/product/[id]', params: { id: String(item.id) } })}
+              outlet={item.outlet}
+              isLoggedIn={isLoggedIn}
+              onLoginPrompt={onLoginPrompt}
+              onPress={() =>
+                router.push({
+                  pathname: '/product/[id]',
+                  params: { id: String(item.id) },
+                })
+              }
             />
           </View>
         ))}
@@ -59,7 +82,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   seeAllText: {
-   fontWeight:600,
+    fontWeight: '600',
     fontSize: 9.5,
     marginRight: 2,
   },
