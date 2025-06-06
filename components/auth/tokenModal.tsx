@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
 import AuthModal from './authModal';
 import CustomButton from '@/components/ui/CustomButton';
 
@@ -7,35 +7,60 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   onSubmit: (token: string) => void;
-   loading?: boolean;
+  loading?: boolean;
+  email: string;
+  onResend: () => void;
+  resendLoading?: boolean;
 };
 
-const TokenModal = ({ visible, onClose, onSubmit, loading }: Props) => {
+const RESEND_DELAY = 30; // seconds
+
+const TokenModal = ({
+  visible,
+  onClose,
+  onSubmit,
+  loading,
+  onResend,
+  resendLoading,
+  email,
+}: Props) => {
   const [token, setToken] = useState<string[]>(['', '', '', '', '', '']);
+  const [timer, setTimer] = useState<number>(RESEND_DELAY);
   const inputsRef = useRef<Array<TextInput | null>>([]);
 
   useEffect(() => {
     if (visible) {
       setToken(['', '', '', '', '', '']);
-      // Focus first input when modal opens
-      setTimeout(() => {
-        inputsRef.current[0]?.focus();
-      }, 100);
+      setTimer(RESEND_DELAY);
+      setTimeout(() => inputsRef.current[0]?.focus(), 100);
     }
   }, [visible]);
+
+  useEffect(() => {
+   let interval: ReturnType<typeof setInterval>;
+
+    if (timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [timer]);
+
+  const handleResend = () => {
+    if (timer === 0 && !resendLoading) {
+      onResend();
+      setTimer(RESEND_DELAY);
+    }
+  };
 
   const handleChange = (text: string, index: number) => {
     if (/^\d$/.test(text)) {
       const newToken = [...token];
       newToken[index] = text;
       setToken(newToken);
-
-      // Focus next input if exists
-      if (index < 5) {
-        inputsRef.current[index + 1]?.focus();
-      }
+      if (index < 5) inputsRef.current[index + 1]?.focus();
     } else if (text === '') {
-      // Clear current input
       const newToken = [...token];
       newToken[index] = '';
       setToken(newToken);
@@ -44,17 +69,12 @@ const TokenModal = ({ visible, onClose, onSubmit, loading }: Props) => {
 
   const handleKeyPress = (e: any, index: number) => {
     if (e.nativeEvent.key === 'Backspace') {
-      if (token[index] === '') {
-        // Move focus to previous input if current is empty
-        if (index > 0) {
-          inputsRef.current[index - 1]?.focus();
-        }
-      } else {
-        // Clear current input on backspace
-        const newToken = [...token];
-        newToken[index] = '';
-        setToken(newToken);
+      if (token[index] === '' && index > 0) {
+        inputsRef.current[index - 1]?.focus();
       }
+      const newToken = [...token];
+      newToken[index] = '';
+      setToken(newToken);
     }
   };
 
@@ -87,13 +107,27 @@ const TokenModal = ({ visible, onClose, onSubmit, loading }: Props) => {
           />
         ))}
       </View>
-      <CustomButton
-         text={loading ?  <ActivityIndicator />  : 'Continue'}
-        onPress={() => onSubmit(joinedToken)}
-      
-        disabled={loading || token.length !== 6}
 
+      <CustomButton
+        text={loading ? <ActivityIndicator /> : 'Continue'}
+        onPress={() => onSubmit(joinedToken)}
+        disabled={loading || isDisabled}
       />
+
+      <View style={styles.resendContainer}>
+        {timer > 0 ? (
+          <Text style={styles.resendText}>
+            You can resend the code in <Text style={styles.countdown}>{timer}s</Text>
+          </Text>
+        ) : (
+          <Text style={styles.resendText}>
+            Didn’t get the code?{' '}
+            <Text onPress={handleResend} style={styles.resendLink}>
+              {resendLoading ? 'Sending...' : 'Resend'}
+            </Text>
+          </Text>
+        )}
+      </View>
     </AuthModal>
   );
 };
@@ -103,7 +137,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginVertical: 20,
-    
   },
   otpInput: {
     width: 50,
@@ -113,6 +146,23 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     textAlign: 'center',
     fontSize: 20,
+  },
+  resendContainer: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  resendText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  resendLink: {
+    color: '#007AFF',
+    textDecorationLine: 'underline',
+    fontWeight: '500',
+  },
+  countdown: {
+    fontWeight: 'bold',
+    color: '#555',
   },
 });
 

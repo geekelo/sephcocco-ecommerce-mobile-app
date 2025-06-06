@@ -127,12 +127,25 @@ const ForgotPasswordFlow = () => {
           loading={isRequesting}
         />
 
-        <TokenModal
-          visible={step === 2}
-          onClose={() => setStep(3)}
-          onSubmit={handleTokenSubmit}
-          loading={false}
-        />
+       <TokenModal
+  visible={step === 2}
+  onClose={() => setStep(3)}
+  onSubmit={handleTokenSubmit}
+  loading={false}
+  email={email}
+  onResend={() =>
+    requestReset(email, {
+      onSuccess: () => {
+        Alert.alert('Code Resent', 'Check your email again.');
+      },
+      onError: () => {
+        Alert.alert('Error', 'Failed to resend code.');
+      },
+    })
+  }
+  resendLoading={isRequesting}
+/>
+
 
         <NewPasswordModal
           visible={step === 3}
