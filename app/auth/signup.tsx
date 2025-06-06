@@ -50,7 +50,7 @@ export default function SignupScreen() {
       {
         onSuccess: () => {
           Alert.alert('Success', 'Account created successfully');
-          router.push('/signIn');
+          router.push('/auth/signIn');
         },
         onError: (error: any) => {
           Alert.alert('Error', error.response?.data?.message || 'Failed to sign up');
@@ -137,7 +137,7 @@ export default function SignupScreen() {
             />
             <Text style={[styles.loginText, { color: theme.text }]}>
               Already have an account?{' '}
-              <Link style={[styles.loginLink, { color: theme.success }]} href="/signIn">
+              <Link style={[styles.loginLink, { color: theme.success }]} href="/auth/signIn">
                 Sign in
               </Link>
             </Text>
