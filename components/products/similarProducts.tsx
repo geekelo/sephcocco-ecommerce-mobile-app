@@ -17,11 +17,20 @@ type SimilarProduct = {
 type Props = {
   similar: SimilarProduct[];
   onProductPress: (id: number) => void;
-  
- title?: string;  
+  title?: string;
+  outlet?: 'pharmacy' | 'restaurant' | 'lounge';
+  isLoggedIn?: boolean;
+  onLoginPrompt?: () => void;
 };
 
-export default function SimilarProducts({ similar, onProductPress, title = "Similar Products"  }: Props) {
+export default function SimilarProducts({
+  similar,
+  onProductPress,
+  title = "Similar Products",
+  outlet,
+  isLoggedIn,
+  onLoginPrompt,
+}: Props) {
   const itemsPerPage = 2;
   const [currentPage, setCurrentPage] = React.useState(0);
 
@@ -40,10 +49,18 @@ export default function SimilarProducts({ similar, onProductPress, title = "Simi
     if (currentPage < totalPages - 1) setCurrentPage(currentPage + 1);
   };
 
+  // Show empty state if no similar products
+  if (!similar.length) {
+    return (
+      <View style={styles.similarContainer}>
+        <ThemedText style={styles.emptyText}>No similar products found.</ThemedText>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.similarContainer}>
       <View style={styles.similarHeader}>
-       
         <ThemedText style={styles.similarTitle}>{title}</ThemedText>
         <View style={styles.paginationContainer}>
           <View
@@ -86,11 +103,14 @@ export default function SimilarProducts({ similar, onProductPress, title = "Simi
         renderItem={({ item }) => (
           <ThemedView style={styles.cardWrapper}>
             <Card
-              image={item.image}
+              image={{ uri: item.image }}
               title={item.title}
               favorites={item.favorites}
-              amount={item.amount}
+              amount={`₦${item.amount}`}
               stock={item.stock}
+              outlet={outlet}
+              isLoggedIn={!!isLoggedIn}
+              onLoginPrompt={onLoginPrompt}
               onPress={() => onProductPress(item.id)}
             />
           </ThemedView>
@@ -105,25 +125,21 @@ const styles = StyleSheet.create({
   similarContainer: {
     marginTop: 30,
   },
-
   similarHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 10,
   },
-
   similarTitle: {
     fontSize: 16,
     fontWeight: "600",
   },
-
   paginationContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
-
   iconWrapper: {
     width: 20,
     height: 20,
@@ -131,20 +147,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   disabledIconWrapper: {
     backgroundColor: "gray",
     opacity: 0.6,
   },
-
   gridContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 20,
   },
-
   cardWrapper: {
     width: "48%",
     marginBottom: 30,
+  },
+  emptyText: {
+    textAlign: "center",
+    fontSize: 14,
+    color: "#666",
+    paddingVertical: 20,
   },
 });

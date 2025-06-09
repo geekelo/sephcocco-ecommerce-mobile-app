@@ -7,11 +7,16 @@ import {
   Text,
   TouchableOpacity,
   useColorScheme,
+  useWindowDimensions,
   View,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Card } from '../common/ProductCard';
 import { router } from 'expo-router';
-import { productData } from '../common/ProductData';
+import { useProducts } from '@/hooks/useProducts';
+import axios from 'axios';
+
 type ProductListProps = {
   outlet: 'pharmacy' | 'restaurant' | 'lounge';
   isLoggedIn: boolean;
@@ -21,8 +26,20 @@ type ProductListProps = {
 export default function ProductList({ outlet, isLoggedIn, onLoginPrompt }: ProductListProps) {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
+  const { width } = useWindowDimensions();
 
-  const filteredProducts = productData.filter((item) => item.outlet === outlet);
+  // Fetch products for the outlet
+  const { data, isLoading, error } = useProducts(outlet);
+
+  // Debug logs
+  console.log('[ProductList] useProducts → isLoading:', isLoading);
+  console.log('[ProductList] useProducts → error:', error);
+  console.log('[ProductList] useProducts → data:', data);
+
+
+  // Responsive number of columns for product cards
+  const numColumns = width > 768 ? 3 : width > 480 ? 2 : 1;
+  const cardWidth = (width - 60 - (numColumns - 1) * 16) / numColumns;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -34,14 +51,28 @@ export default function ProductList({ outlet, isLoggedIn, onLoginPrompt }: Produ
         </TouchableOpacity>
       </View>
 
+      {isLoading && (
+        <ActivityIndicator size="large" color={theme.tint} style={{ marginTop: 60 }} />
+      )}
+
+      {error && (
+        <Text style={{ textAlign: 'center', color: 'red', marginTop: 60 }}>
+          Failed to load products.
+        </Text>
+      )}
+ {!isLoading && !error && data?.length === 0 && (
+      <Text style={{ textAlign: 'center', marginTop: 60, color: theme.text}}>
+        No products available at the moment.
+      </Text>
+    )}
       <View style={styles.gridContainer}>
-        {filteredProducts.map((item) => (
-          <View key={item.id} style={styles.cardWrapper}>
+        {data?.map((item: any) => (
+          <View key={item.id} style={[styles.cardWrapper, { width: cardWidth }]}>
             <Card
-              image={item.image}
+              image={{ uri: item.image_url }}
               title={item.title}
               favorites={item.favorites}
-              amount={item.amount}
+              amount={`₦${item.price}`}
               stock={item.stock}
               outlet={item.outlet}
               isLoggedIn={isLoggedIn}
@@ -62,8 +93,9 @@ export default function ProductList({ outlet, isLoggedIn, onLoginPrompt }: Produ
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    paddingVertical: 20,
+    paddingTop: Platform.OS === 'android' ? 32 : 40,
+    paddingBottom: 60,
+    paddingHorizontal: 20,
   },
   headerRow: {
     flexDirection: 'row',
@@ -82,16 +114,17 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontWeight: '600',
-    fontSize: 9.5,
-    marginRight: 2,
+    fontSize: 10,
+    marginRight: 4,
   },
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    rowGap: 24,
+    columnGap: 16,
   },
   cardWrapper: {
-    width: '48%',
-    marginBottom: 60,
+    marginBottom: 40,
   },
 });
