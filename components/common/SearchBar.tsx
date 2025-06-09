@@ -10,23 +10,35 @@ import {
 } from 'react-native';
 import { Feather, Entypo } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
+import { useProductCategories } from '@/hooks/useCategories';
 
 interface SearchBarProps {
   onFilterToggle?: () => void;
+  onFilterSelect?: (option: string) => void; // Add this
   filterOpen: boolean;
   onSearchChange?: (text: string) => void;
   filterOptions: string[];
 }
 
+
 export function SearchBar({
   onFilterToggle,
   filterOpen,
   onSearchChange,
+  onFilterSelect,
   filterOptions,
 }: SearchBarProps) {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const themedStyles = getThemedStyles(theme);
+  const activeOutlet = "restaurant"; 
+
+const { data: categories, isLoading, error } = useProductCategories(activeOutlet);
+
+
+  console.log('Fetched Categories:', categories);
+  console.log('Loading:', isLoading);
+  console.log('Error:', error);
 
   return (
     <>
@@ -46,15 +58,19 @@ export function SearchBar({
       </View>
 
       {/* Dropdown menu */}
-      {filterOpen && (
-        <View style={themedStyles.dropdown}>
-          {filterOptions.map((option, idx) => (
-            <Text key={idx} style={themedStyles.dropdownItem}>
-              {option}
-            </Text>
-          ))}
-        </View>
-      )}
+     {filterOpen && (
+  <View style={themedStyles.dropdown}>
+    {filterOptions.map((option, idx) => (
+      <TouchableOpacity
+        key={idx}
+        onPress={() => onFilterSelect?.(option)}
+      >
+        <Text style={themedStyles.dropdownItem}>{option}</Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+)}
+
     </>
   );
 }
@@ -107,19 +123,21 @@ const getThemedStyles = (theme: any) =>
       paddingHorizontal: 8,
       width: screenWidth * 0.3, // 30% of screen width
     },
-    dropdown: {
-      position: 'absolute',
-      top: 90,
-      right: screenWidth * 0.05, // align with margin
-      borderRadius: 8,
-      borderWidth: 0.5,
-      padding: 12,
-      width: screenWidth * 0.6, // 60% of screen width
-      backgroundColor: theme.text,
-      borderColor: theme.border,
-      zIndex: 1000,
-      elevation: 10,
-    },
+   dropdown: {
+  position: 'absolute',
+  top: 60, // Adjust to better match the search bar height
+  right: screenWidth * 0.05,
+  borderRadius: 8,
+  borderWidth: 0.5,
+  padding: 12,
+  width: screenWidth * 0.6,
+  backgroundColor: theme.white,
+  borderColor: theme.border,
+  zIndex: 9999, // Increased zIndex
+  elevation: 10, // Also raise elevation for Android shadow
+  
+},
+
     dropdownItem: {
       paddingVertical: 6,
       fontSize: 16,

@@ -13,14 +13,14 @@ export const useProducts = (activeOutlet: string) => {
  return useQuery({
   queryKey: ["products", activeOutlet],
   queryFn: async () => {
-    console.log("[useProducts] Fetching products for outlet:", activeOutlet);
-    console.log("[useProducts] API_BASE_URL:", API_BASE_URL);
-    console.log("[useProducts] Full URL:", endpoint);
+    // console.log("[useProducts] Fetching products for outlet:", activeOutlet);
+    // console.log("[useProducts] API_BASE_URL:", API_BASE_URL);
+    // console.log("[useProducts] Full URL:", endpoint);
 
     try {
       const response = await axios.get(endpoint);
-      console.log("res", response)
-      console.log("[useProducts] Response data:", response.data);
+      // console.log("res", response)
+      // console.log("[useProducts] Response data:", response.data);
 
       // Assuming response.data has a 'products' field with the array
       return response.data.products ?? response.data;
