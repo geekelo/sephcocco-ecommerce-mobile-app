@@ -1,165 +1,109 @@
 import { Colors } from '@/constants/Colors';
+import { useProducts } from '@/hooks/useProducts'; // <- make sure this path is correct
 import { Feather } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, useColorScheme, useWindowDimensions, } from 'react-native';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useColorScheme,
+  useWindowDimensions,
+  ActivityIndicator,
+  View,
+  Platform,
+} from 'react-native';
 import { Card } from '../common/ProductCard';
 import { SearchBar } from '../common/SearchBar';
 import { ThemedView } from '../ThemedView';
-import { ThemedText } from '../ThemedText';
 import { CustomOutlineButton } from '../ui/CustomOutlineButton';
 import { router } from 'expo-router';
-import { Platform } from 'react-native';
-
-
-const productData = [
-  {
-    id: 1,
-    image: require('@/assets/images/image(1).png'),
-    title: 'Modern Sofa',
-    favorites: 34,
-    amount: '$230.00',
-    stock: 12,
-  },
-  {
-    id: 2,
-    image: require('@/assets/images/image(1).png'),
-    title: 'Wooden Desk',
-    favorites: 21,
-    amount: '$180.00',
-    stock: 5,
-  },
-  {
-    id: 3,
-    image: require('@/assets/images/image(1).png'),
-    title: 'Reading Lamp',
-    favorites: 56,
-    amount: '$75.00',
-    stock: 9,
-  },
-  {
-    id: 4,
-    image: require('@/assets/images/image(1).png'),
-    title: 'Floor Vase',
-    favorites: 18,
-    amount: '$40.00',
-    stock: 6,
-  },
-   {
-    id: 5,
-    image: require('@/assets/images/image(1).png'),
-    title: 'Modern Sofa',
-    favorites: 34,
-    amount: '$230.00',
-    stock: 0,
-  },
-  {
-    id: 6,
-    image: require('@/assets/images/image(1).png'),
-    title: 'Wooden Desk',
-    favorites: 21,
-    amount: '$180.00',
-    stock: 5,
-  },
-  {
-    id: 7,
-    image: require('@/assets/images/image(1).png'),
-    title: 'Reading Lamp',
-    favorites: 56,
-    amount: '$75.00',
-    stock:0,
-  },
-  {
-    id: 8,
-    image: require('@/assets/images/image(1).png'),
-    title: 'Floor Vase',
-    favorites: 18,
-    amount: '$40.00',
-    stock: 6,
-  },
-];
 
 export default function Products() {
-     const colorScheme = useColorScheme();
-      const theme = Colors[colorScheme ?? 'light'];
-       const [filterOpen, setFilterOpen] = useState(false);
-        const { width } = useWindowDimensions();
+  const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme ?? 'light'];
+  const { width } = useWindowDimensions();
+  const [filterOpen, setFilterOpen] = useState(false);
 
-  const toggleFilter = () => {
-    setFilterOpen(!filterOpen);
-  };
+  const activeOutlet = 'lounge'; // OR 'pharmacy' / 'restaurant' – make dynamic if needed
+  const { data, isLoading, error } = useProducts(activeOutlet);
+
+  const toggleFilter = () => setFilterOpen(!filterOpen);
+
   const filterOptions = [
-  'Price: Low to High',
-  'Price: High to Low',
-  'Newest First',
-  'Categories',
-  'Rating',
-];
-const numColumns = width > 768 ? 3 : width > 480 ? 2 : 1;
-  const cardWidth = (width - 60 - (numColumns - 1) * 16) / numColumns; // 60 is padding
+    'Price: Low to High',
+    'Price: High to Low',
+    'Newest First',
+    'Categories',
+    'Rating',
+  ];
+
+  const numColumns = width > 768 ? 3 : width > 480 ? 2 : 1;
+  const cardWidth = (width - 60 - (numColumns - 1) * 16) / numColumns;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Header */}
-    <SearchBar filterOptions={filterOptions} onFilterToggle={toggleFilter} filterOpen={filterOpen} />
+      <SearchBar
+        filterOptions={filterOptions}
+        onFilterToggle={toggleFilter}
+        filterOpen={filterOpen}
+      />
 
-      {/* Product Cards in Grid */}
-      <ThemedView style={styles.gridContainer}>
-        {productData.map((item) => (
-          <ThemedView key={item.id} style={[styles.cardWrapper, { width: cardWidth }]}>
-            <Card
-              image={item.image}
-              title={item.title}
-              favorites={item.favorites}
-              amount={item.amount}
-              stock={item.stock}
-              onPress={() =>
-                router.push({ pathname: '/product/[id]', params: { id: String(item.id) } })
-              }
-            />
-          </ThemedView>
-        ))}
-      </ThemedView>
-      <CustomOutlineButton
-  title="Have any Questions? Send us a message"
-  color={theme.orange}  // orange color (optional)
-  onPress={() => alert('Button pressed!')}
-   style={styles.bottomOutlineButton}
+      {/* Loading & Error States */}
+      {isLoading && (
+        <ActivityIndicator size="large" color={theme.tint} style={{ marginTop: 60 }} />
+      )}
+
+      {error && (
+        <Text style={{ textAlign: 'center', color: 'red', marginTop: 60 }}>
+          Failed to load products.
+        </Text>
+      )}
+
+      {!isLoading && data && (
+        <ThemedView style={styles.gridContainer}>
+          {data.map((item: any) => (
+            <ThemedView key={item.id} style={[styles.cardWrapper, { width: cardWidth }]}>
+             <Card
+  image={{ uri: item.image_url }}
+  title={item.title}
+  favorites={item.favorites}
+  amount={`₦${item.price}`}
+  stock={item.stock}
+  onPress={() =>
+    router.push({ pathname: '/product/[id]', params: { id: String(item.id) } })
+  }
+  outlet={activeOutlet} // required if Card expects outlet
+  isLoggedIn={false} // or get it from props/context
+  onLoginPrompt={() => alert('Please log in to continue')} // optional
 />
 
+            </ThemedView>
+          ))}
+        </ThemedView>
+      )}
+
+      <CustomOutlineButton
+        title="Have any Questions? Send us a message"
+        color={theme.orange}
+        onPress={() => alert('Button pressed!')}
+        style={styles.bottomOutlineButton}
+      />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-     paddingTop: Platform.OS === 'android' ? 32 : 40,
+    paddingTop: Platform.OS === 'android' ? 32 : 40,
     paddingBottom: 60,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 28,
-  },
-  headerText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  seeAll: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  seeAllText: {
-   fontWeight:600,
-    fontSize: 9.5,
-    marginRight: 2,
   },
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    paddingVertical:40,
-    margin:8
+    paddingVertical: 40,
+    margin: 8,
   },
   cardWrapper: {
     width: '48%',
@@ -170,6 +114,4 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: 20,
   },
-  
- 
 });

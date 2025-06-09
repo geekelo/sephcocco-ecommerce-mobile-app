@@ -21,6 +21,7 @@ import {  Ionicons } from "@expo/vector-icons";
 import { StarRating } from "@/components/common/ratingCard";
 import SimilarProducts from "@/components/products/similarProducts";
 import { Dimensions } from "react-native";
+import { useProductById } from "@/hooks/useProductsId";
 
 const { width } = Dimensions.get("window");
 type SimilarProduct = {
@@ -56,7 +57,8 @@ export default function ProductDetail() {
   const [filterOpen, setFilterOpen] = useState(false);
 
   // Assuming productData is imported and available
-  const product: Product = productData.find((p) => p.id === Number(id));
+ const { data: product, isLoading, isError } = useProductById("pharmacy", String(id));
+
 
   const toggleFilter = () => setFilterOpen(!filterOpen);
 
@@ -69,6 +71,24 @@ export default function ProductDetail() {
       </Layout>
     );
   }
+  if (isLoading) {
+  return (
+    <Layout>
+      <ThemedText style={{ padding: 20 }}>Loading...</ThemedText>
+    </Layout>
+  );
+}
+
+if (isError) {
+  return (
+    <Layout>
+      <ThemedText style={{ padding: 20, color: "red" }}>
+        Failed to load product.
+      </ThemedText>
+    </Layout>
+  );
+}
+
 
   const filterOptions = [
     "Price: Low to High",
@@ -113,7 +133,7 @@ export default function ProductDetail() {
           <View
             style={[styles.subImageContainer, { borderColor: theme.orange }]}
           >
-            {product.subImages.map((img, idx) => (
+            {product.subImages.map((img:any, idx:any) => (
               <Image key={idx} source={img} style={styles.subImage} />
             ))}
           </View>
