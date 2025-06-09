@@ -18,12 +18,24 @@ import { SearchBar } from '../common/SearchBar';
 import { ThemedView } from '../ThemedView';
 import { CustomOutlineButton } from '../ui/CustomOutlineButton';
 import { router } from 'expo-router';
+import { useProductCategories } from '@/hooks/useCategories';
 
 export default function Products() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const { width } = useWindowDimensions();
   const [filterOpen, setFilterOpen] = useState(false);
+const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+
+const handleFilterSelect = (option: string) => {
+  setSelectedFilter(option);
+  if (option === 'Categories') {
+    setFilterOpen(false); // Optionally close the dropdown
+    console.log('Fetching categories...');
+  }
+};
 
   const activeOutlet = 'lounge'; // OR 'pharmacy' / 'restaurant' – make dynamic if needed
   const { data, isLoading, error } = useProducts(activeOutlet);
@@ -38,16 +50,56 @@ export default function Products() {
     'Rating',
   ];
 
+  const {
+  data: categories,
+  isLoading: isCategoriesLoading,
+  error: categoriesError,
+} = useProductCategories(activeOutlet);
+
+if (selectedFilter === 'Categories') {
+  console.log('Selected Categories:', categories);
+}
+
+
   const numColumns = width > 768 ? 3 : width > 480 ? 2 : 1;
   const cardWidth = (width - 60 - (numColumns - 1) * 16) / numColumns;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <SearchBar
-        filterOptions={filterOptions}
-        onFilterToggle={toggleFilter}
-        filterOpen={filterOpen}
-      />
+     <SearchBar
+  filterOptions={filterOptions}
+  onFilterToggle={toggleFilter}
+  filterOpen={filterOpen}
+  onFilterSelect={handleFilterSelect}
+/>
+{selectedFilter === 'Categories' && (
+  <View style={styles.categoryDropdown}>
+    {isCategoriesLoading && <ActivityIndicator size="small" color={theme.tint} />}
+    {categoriesError && <Text style={{ color: 'red' }}>Failed to load categories</Text>}
+    {categories && categories.length > 0 && (
+      categories.map((cat: any) => (
+        <TouchableOpacity
+          key={cat.id}
+          style={[
+            styles.categoryItem,
+            selectedCategory === cat.name && { backgroundColor: theme.tint },
+          ]}
+          onPress={() => setSelectedCategory(cat.name)}
+        >
+          <Text
+            style={{
+              color: selectedCategory === cat.name ? '#fff' : theme.text,
+              fontWeight: selectedCategory === cat.name ? 'bold' : 'normal',
+            }}
+          >
+            {cat.name}
+          </Text>
+        </TouchableOpacity>
+      ))
+    )}
+  </View>
+)}
+
 
       {/* Loading & Error States */}
       {isLoading && (
@@ -114,4 +166,21 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: 20,
   },
+  categoryDropdown: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  justifyContent: 'center',
+  gap: 10,
+  marginTop: 10,
+  paddingHorizontal: 20,
+},
+categoryItem: {
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 20,
+  marginBottom: 10,
+},
+
 });
