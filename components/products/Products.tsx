@@ -1,5 +1,5 @@
 import { Colors } from '@/constants/Colors';
-import { useProducts } from '@/hooks/useProducts'; // <- make sure this path is correct
+import { useProducts } from '@/hooks/useProducts';
 import { Feather } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
@@ -19,26 +19,38 @@ import { ThemedView } from '../ThemedView';
 import { CustomOutlineButton } from '../ui/CustomOutlineButton';
 import { router } from 'expo-router';
 import { useProductCategories } from '@/hooks/useCategories';
+import { useOutlet } from '@/context/outletContext'; // ✅ add this
 
 export default function Products() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const { width } = useWindowDimensions();
   const [filterOpen, setFilterOpen] = useState(false);
-const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
-const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
+  const { activeOutlet } = useOutlet(); // ✅ use context to get active outlet
 
-const handleFilterSelect = (option: string) => {
-  setSelectedFilter(option);
-  if (option === 'Categories') {
-    setFilterOpen(false); // Optionally close the dropdown
-    console.log('Fetching categories...');
-  }
-};
+  const handleFilterSelect = (option: string) => {
+    setSelectedFilter(option);
+    if (option === 'Categories') {
+      setFilterOpen(false);
+    }
+  };
+  if (!activeOutlet) {
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text>Loading outlet...</Text>
+    </View>
+  );
+}
 
-  const activeOutlet = 'lounge'; // OR 'pharmacy' / 'restaurant' – make dynamic if needed
   const { data, isLoading, error } = useProducts(activeOutlet);
+  const {
+    data: categories,
+    isLoading: isCategoriesLoading,
+    error: categoriesError,
+  } = useProductCategories(activeOutlet);
 
   const toggleFilter = () => setFilterOpen(!filterOpen);
 
@@ -50,62 +62,45 @@ const handleFilterSelect = (option: string) => {
     'Rating',
   ];
 
-  const {
-  data: categories,
-  isLoading: isCategoriesLoading,
-  error: categoriesError,
-} = useProductCategories(activeOutlet);
-
-if (selectedFilter === 'Categories') {
-  console.log('Selected Categories:', categories);
-}
-
-
   const numColumns = width > 768 ? 3 : width > 480 ? 2 : 1;
   const cardWidth = (width - 60 - (numColumns - 1) * 16) / numColumns;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-     <SearchBar
-  filterOptions={filterOptions}
-  onFilterToggle={toggleFilter}
-  filterOpen={filterOpen}
-  onFilterSelect={handleFilterSelect}
-/>
-{selectedFilter === 'Categories' && (
-  <View style={styles.categoryDropdown}>
-    {isCategoriesLoading && <ActivityIndicator size="small" color={theme.tint} />}
-    {categoriesError && <Text style={{ color: 'red' }}>Failed to load categories</Text>}
-    {categories && categories.length > 0 && (
-      categories.map((cat: any) => (
-        <TouchableOpacity
-          key={cat.id}
-          style={[
-            styles.categoryItem,
-            selectedCategory === cat.name && { backgroundColor: theme.tint },
-          ]}
-          onPress={() => setSelectedCategory(cat.name)}
-        >
-          <Text
-            style={{
-              color: selectedCategory === cat.name ? '#fff' : theme.text,
-              fontWeight: selectedCategory === cat.name ? 'bold' : 'normal',
-            }}
-          >
-            {cat.name}
-          </Text>
-        </TouchableOpacity>
-      ))
-    )}
-  </View>
-)}
+      <SearchBar
+        filterOptions={filterOptions}
+        onFilterToggle={toggleFilter}
+        filterOpen={filterOpen}
+        onFilterSelect={handleFilterSelect}
+      />
 
-
-      {/* Loading & Error States */}
-      {isLoading && (
-        <ActivityIndicator size="large" color={theme.tint} style={{ marginTop: 60 }} />
+      {selectedFilter === 'Categories' && (
+        <View style={styles.categoryDropdown}>
+          {isCategoriesLoading && <ActivityIndicator size="small" color={theme.tint} />}
+          {categoriesError && <Text style={{ color: 'red' }}>Failed to load categories</Text>}
+          {categories?.map((cat: any) => (
+            <TouchableOpacity
+              key={cat.id}
+              style={[
+                styles.categoryItem,
+                selectedCategory === cat.name && { backgroundColor: theme.tint },
+              ]}
+              onPress={() => setSelectedCategory(cat.name)}
+            >
+              <Text
+                style={{
+                  color: selectedCategory === cat.name ? '#fff' : theme.text,
+                  fontWeight: selectedCategory === cat.name ? 'bold' : 'normal',
+                }}
+              >
+                {cat.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       )}
 
+      {isLoading && <ActivityIndicator size="large" color={theme.tint} style={{ marginTop: 60 }} />}
       {error && (
         <Text style={{ textAlign: 'center', color: 'red', marginTop: 60 }}>
           Failed to load products.
@@ -116,20 +111,19 @@ if (selectedFilter === 'Categories') {
         <ThemedView style={styles.gridContainer}>
           {data.map((item: any) => (
             <ThemedView key={item.id} style={[styles.cardWrapper, { width: cardWidth }]}>
-             <Card
-  image={{ uri: item.image_url }}
-  title={item.title}
-  favorites={item.favorites}
-  amount={`₦${item.price}`}
-  stock={item.stock}
-  onPress={() =>
-    router.push({ pathname: '/product/[id]', params: { id: String(item.id) } })
-  }
-  outlet={activeOutlet} // required if Card expects outlet
-  isLoggedIn={false} // or get it from props/context
-  onLoginPrompt={() => alert('Please log in to continue')} // optional
-/>
-
+              <Card
+                image={{ uri: item.image_url }}
+                title={item.title}
+                favorites={item.favorites}
+                amount={`₦${item.price}`}
+                stock={item.stock}
+                onPress={() =>
+                  router.push({ pathname: '/product/[id]', params: { id: String(item.id) } })
+                }
+                outlet={activeOutlet}
+                isLoggedIn={false}
+                onLoginPrompt={() => alert('Please log in to continue')}
+              />
             </ThemedView>
           ))}
         </ThemedView>
@@ -156,6 +150,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 40,
     margin: 8,
+    gap:12
   },
   cardWrapper: {
     width: '48%',
@@ -167,20 +162,19 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   categoryDropdown: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  justifyContent: 'center',
-  gap: 10,
-  marginTop: 10,
-  paddingHorizontal: 20,
-},
-categoryItem: {
-  paddingHorizontal: 12,
-  paddingVertical: 8,
-  borderWidth: 1,
-  borderColor: '#ccc',
-  borderRadius: 20,
-  marginBottom: 10,
-},
-
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 10,
+    paddingHorizontal: 20,
+  },
+  categoryItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 20,
+    marginBottom: 10,
+  },
 });

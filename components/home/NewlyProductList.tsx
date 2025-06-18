@@ -70,8 +70,8 @@ export default function ProductList({ outlet, isLoggedIn, onLoginPrompt }: Produ
           <View key={item.id} style={[styles.cardWrapper, { width: cardWidth }]}>
             <Card
               image={{ uri: item.image_url }}
-              title={item.title}
-              favorites={item.favorites}
+              title={item.name}
+              favorites={item.likes}
               amount={`₦${item.price}`}
               stock={item.stock}
               outlet={item.outlet}

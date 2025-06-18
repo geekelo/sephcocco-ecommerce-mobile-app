@@ -7,6 +7,7 @@ import {
   View,
   TouchableOpacity,
   Platform,
+  Text,
 } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -22,6 +23,7 @@ import { StarRating } from "@/components/common/ratingCard";
 import SimilarProducts from "@/components/products/similarProducts";
 import { Dimensions } from "react-native";
 import { useProductById } from "@/hooks/useProductsId";
+import { useOutlet } from "@/context/outletContext";
 
 const { width } = Dimensions.get("window");
 type SimilarProduct = {
@@ -53,12 +55,21 @@ export default function ProductDetail() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? "light"];
   const navigation = useNavigation();
+  
+    const { activeOutlet } = useOutlet(); 
+  console.log(activeOutlet)
 
   const [filterOpen, setFilterOpen] = useState(false);
-
+if (!activeOutlet) {
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text>Loading outlet...</Text>
+    </View>
+  );
+}
   // Assuming productData is imported and available
- const { data: product, isLoading, isError } = useProductById("pharmacy", String(id));
-
+ const { data: product, isLoading, isError } = useProductById(activeOutlet, String(id));
+console.log(product)
 
   const toggleFilter = () => setFilterOpen(!filterOpen);
 
@@ -127,22 +138,22 @@ if (isError) {
         </TouchableOpacity>
         <ScrollView contentContainerStyle={styles.container}>
           {/* Main Image */}
-          <Image source={product.image} style={styles.images} />
+          <Image source={{ uri: product?.image_url }} style={styles.images} />
 
           {/* Sub Images */}
           <View
             style={[styles.subImageContainer, { borderColor: theme.orange }]}
           >
-            {product.subImages.map((img:any, idx:any) => (
-              <Image key={idx} source={img} style={styles.subImage} />
+            {product?.other_images.map((img:any, idx:any) => (
+              <Image key={idx} source={{ uri: img }} style={styles.subImage} />
             ))}
           </View>
 
           <ThemedText fontFamily="Raleway-Regular" style={styles.title}>
-            {product.title}
+            {product.name}
           </ThemedText>
           <ThemedText fontFamily="Raleway-Regular" style={styles.stock}>
-            In stock: {product.stock} items
+            In stock: {product.amount_in_stock} items
           </ThemedText>
           <View
             style={{
@@ -153,10 +164,10 @@ if (isError) {
             }}
           >
             <StarRating rating={Math.min(5, product.favorites / 10)} />
-            <ThemedText>({product.favorites} )</ThemedText>
+            <ThemedText>({product?.likes} )</ThemedText>
           </View>
 
-          <ThemedText style={styles.amount}>{product.amount}</ThemedText>
+          <ThemedText style={styles.amount}>₦ {product.price}</ThemedText>
 
           <ThemedView>
             <ThemedText
@@ -166,7 +177,7 @@ if (isError) {
               Product Description
             </ThemedText>
             <ThemedText fontFamily="Raleway-Regular" style={styles.description}>
-              {product.description}
+              {product.long_description}
             </ThemedText>
           </ThemedView>
           <ThemedView style={styles.row}>
@@ -199,7 +210,7 @@ if (isError) {
             />
           </ThemedView>
           {/* Similar Products */}
-          {product.similar?.length > 0 && (
+          {/* {product?.similar?.length > 0 && (
             <SimilarProducts
               similar={product.similar}
               onProductPress={(id) =>
@@ -209,7 +220,7 @@ if (isError) {
                 })
               }
             />
-          )}
+          )} */}
 
           <CustomOutlineButton
             title="Have any Questions? Send us a message"
