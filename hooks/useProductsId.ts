@@ -8,7 +8,7 @@ const API_BASE_URL =
 
 export const useProductById = (activeOutlet: string, id: string | null) => {
   const productPath = `sephcocco_${activeOutlet}_products`;
-  const endpoint = `${API_BASE_URL}/api/v1/${activeOutlet}/${productPath}/${id}`;
+  const endpoint = `${API_BASE_URL}/${activeOutlet}/${productPath}/${id}`;
 
   return useQuery({
     queryKey: ["product", activeOutlet, id],
