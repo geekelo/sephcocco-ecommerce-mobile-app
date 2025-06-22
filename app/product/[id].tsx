@@ -138,15 +138,19 @@ if (isError) {
         </TouchableOpacity>
         <ScrollView contentContainerStyle={styles.container}>
           {/* Main Image */}
-          <Image source={{ uri: product?.image_url }} style={styles.images} />
+        <Image source={{ uri: product?.main_image_url }} style={styles.images} />
+
 
           {/* Sub Images */}
           <View
             style={[styles.subImageContainer, { borderColor: theme.orange }]}
           >
-            {product?.other_images.map((img:any, idx:any) => (
-              <Image key={idx} source={{ uri: img }} style={styles.subImage} />
-            ))}
+           {Array.isArray(product?.other_image_urls) &&
+  product.other_image_urls.map((img: any, idx: number) => (
+    <Image key={idx} source={{ uri: img }} style={styles.subImage} />
+))}
+
+
           </View>
 
           <ThemedText fontFamily="Raleway-Regular" style={styles.title}>
