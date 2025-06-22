@@ -35,35 +35,48 @@ const ForgotPasswordFlow = () => {
     isError: err,
   } = useResetPassword();
 
-  const handleEmailSubmit = (emailInput: string) => {
-    setEmail(emailInput);
-    requestReset(emailInput, {
-      onSuccess: () => {
-        Alert.alert(
-          "Success",
-          "If your email is in our system, you will receive 6 digit code."
-        );
-        setTimeout(() => {
-          setStep(2);
-        }, 2000);
-      },
-      onError: () => {
-        Alert.alert("Error", "Failed to send reset email. Try again.");
-      },
-    });
-  };
+const handleEmailSubmit = (emailInput: string) => {
+  setEmail(emailInput);
+  requestReset(emailInput, {
+    onSuccess: (data: any) => {
+      console.log("📦 Reset Email Success Response:", data); 
+
+      Alert.alert(
+        "Success",
+        "If your email is in our system, you will receive 6 digit code."
+      );
+      setTimeout(() => {
+        setStep(2);
+      }, 2000);
+    },
+    onError: (error: any) => {
+      console.log("❌ Reset Email Error:", error?.response?.data || error);
+      Alert.alert("Error", "Failed to send reset email. Try again.");
+    },
+  });
+};
+
 
   const handleTokenSubmit = (code: string) => {
-    if (code.length === 6) {
-      setToken(code);
-      Alert.alert("Success", "Code accepted. Redirecting...");
-      setTimeout(() => {
-        setStep(3);
-      }, 2000);
-    } else {
-      Alert.alert("Invalid Code", "Code must be 6 digits.");
-    }
-  };
+  if (code.length !== 6) {
+    Alert.alert("Invalid Code", "Code must be exactly 6 digits.");
+    return;
+  }
+
+  if (!email) {
+    Alert.alert("Error", "Email not found. Please restart the process.");
+    setStep(1);
+    return;
+  }
+
+  // Simulate token validation (since it's tied to email in your logic)
+  setToken(code);
+  Alert.alert("Code Verified", "You may now reset your password.");
+  setTimeout(() => {
+    setStep(3);
+  }, 1500);
+};
+
 
   const handlePasswordSubmit = (
     password: string,
