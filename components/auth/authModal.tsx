@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   container: {
-    backgroundColor: 'white',
+    backgroundColor: Colors.light.background,
     borderRadius: 12,
     padding: 20,
     gap: 10,
@@ -61,6 +61,7 @@ const styles = StyleSheet.create({
   },
   content: {
     marginVertical: 10,
+    padding:6
   },
   closeText: {
     color: Colors.dark.tint,

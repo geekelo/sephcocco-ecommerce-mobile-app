@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     fontFamily: 'PTSerif-Regular',
-    color: 'white',
+    color: '#fff',
   },
   disabledButton: {
     opacity: 0.5,

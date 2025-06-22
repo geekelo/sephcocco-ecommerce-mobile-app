@@ -38,7 +38,7 @@ export default function ProductList({ outlet, isLoggedIn, onLoginPrompt }: Produ
 
 
   // Responsive number of columns for product cards
-  const numColumns = width > 768 ? 3 : width > 480 ? 2 : 1;
+  const numColumns = width > 768 ? 3 : width > 300 ? 2 : 1;
   const cardWidth = (width - 60 - (numColumns - 1) * 16) / numColumns;
 
   return (
@@ -70,8 +70,8 @@ export default function ProductList({ outlet, isLoggedIn, onLoginPrompt }: Produ
           <View key={item.id} style={[styles.cardWrapper, { width: cardWidth }]}>
             <Card
               image={{ uri: item.image_url }}
-              title={item.title}
-              favorites={item.favorites}
+              title={item.name}
+              favorites={item.likes}
               amount={`₦${item.price}`}
               stock={item.stock}
               outlet={item.outlet}
