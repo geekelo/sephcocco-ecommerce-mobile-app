@@ -125,18 +125,23 @@ const getThemedStyles = (theme: any) =>
     },
    dropdown: {
   position: 'absolute',
-  top: 60, // Adjust to better match the search bar height
-  right: screenWidth * 0.05,
+  top: 80,
+  right: 0,
   borderRadius: 8,
-  borderWidth: 0.5,
-  padding: 12,
+  borderWidth: 1,
+  paddingVertical: 8,
+  paddingHorizontal: 12,
   width: screenWidth * 0.6,
-  backgroundColor: theme.white,
-  borderColor: theme.border,
-  zIndex: 9999, // Increased zIndex
-  elevation: 10, // Also raise elevation for Android shadow
-  
+  backgroundColor: '#fff',
+  borderColor: '#ccc',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 4,
+  elevation: 0,  // Android shadow
+  zIndex: 9999,   // iOS stacking
 },
+
 
     dropdownItem: {
       paddingVertical: 6,

@@ -14,7 +14,7 @@ export default function StoreSelectionScreen() {
   const { setActiveOutlet } = useOutlet(); // ✅ access context setter
 
   const options = [
-    { title: 'Go to Pharmacy', icon: 'pharmacy.fill', href: '/rider', key: 'pharmacy' },
+    { title: 'Go to Pharmacy', icon: 'pharmacy.fill', href: '/pharmacy', key: 'pharmacy' },
     { title: 'Go to Restaurant', icon: 'restaurant.fill', href: '/restaurant', key: 'restaurant' },
     { title: 'Go to Lounge', icon: 'lounge.fill', href: '/lounge', key: 'lounge' },
   ];

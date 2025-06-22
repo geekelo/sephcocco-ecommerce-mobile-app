@@ -1,11 +1,10 @@
-
 {
   "expo": {
     "name": "appp",
     "slug": "appp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "appp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -14,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.png",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#000"
       },
       "edgeToEdgeEnabled": true,
@@ -36,7 +35,8 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
@@ -46,7 +46,7 @@
       "eas": {
         "projectId": "440bedb9-d66d-476c-9085-501174ac315e"
       },
-       "API_BASE_URL": "https://sephcocco-lounge-api.onrender.com/api/v1"
+      "API_BASE_URL": "https://sephcocco-lounge-api.onrender.com/api/v1"
     }
   }
 }

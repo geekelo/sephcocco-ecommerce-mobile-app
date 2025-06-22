@@ -38,7 +38,7 @@ export default function ProductList({ outlet, isLoggedIn, onLoginPrompt }: Produ
 
 
   // Responsive number of columns for product cards
-  const numColumns = width > 768 ? 3 : width > 480 ? 2 : 1;
+  const numColumns = width > 768 ? 3 : width > 300 ? 2 : 1;
   const cardWidth = (width - 60 - (numColumns - 1) * 16) / numColumns;
 
   return (
