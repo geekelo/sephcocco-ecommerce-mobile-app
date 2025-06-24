@@ -7,8 +7,6 @@ import {
   useColorScheme,
   Image,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { useRequestReset, useResetPassword } from "@/hooks/usePassworrdReset";
 import CustomButton from "@/components/ui/CustomButton";
 import EmailModal from "@/components/auth/emailModal";
 import TokenModal from "@/components/auth/tokenModal";
@@ -17,9 +15,9 @@ import { router } from "expo-router";
 import { Colors } from "@/constants/Colors";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { useRequestReset, useResetPassword } from "@/mutation/useAuth";
 
 const ForgotPasswordFlow = () => {
-  const navigation = useNavigation();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? "light"];
 
@@ -28,69 +26,46 @@ const ForgotPasswordFlow = () => {
   const [token, setToken] = useState("");
 
   const { mutate: requestReset, isPending: isRequesting } = useRequestReset();
-  const {
-    mutate: resetPassword,
-    isPending: isResetting,
-    isSuccess: isSucccess,
-    isError: err,
-  } = useResetPassword();
+  const { mutate: resetPassword, isPending: isResetting } = useResetPassword();
 
-const handleEmailSubmit = (emailInput: string) => {
-  setEmail(emailInput);
-  requestReset(emailInput, {
-    onSuccess: (data: any) => {
-      console.log("📦 Reset Email Success Response:", data); 
-
-      Alert.alert(
-        "Success",
-        "If your email is in our system, you will receive 6 digit code."
-      );
-      setTimeout(() => {
-        setStep(2);
-      }, 2000);
-    },
-    onError: (error: any) => {
-      console.log("❌ Reset Email Error:", error?.response?.data || error);
-      Alert.alert("Error", "Failed to send reset email. Try again.");
-    },
-  });
-};
-
+  const handleEmailSubmit = (emailInput: string) => {
+    setEmail(emailInput);
+    requestReset(emailInput, {
+      onSuccess: () => {
+        Alert.alert("Success", "If your email is in our system, you will receive a 6-digit code.");
+        setTimeout(() => setStep(2), 2000);
+      },
+      onError: () => {
+        Alert.alert("Error", "Failed to send reset email. Try again.");
+      },
+    });
+  };
 
   const handleTokenSubmit = (code: string) => {
-  if (code.length !== 6) {
-    Alert.alert("Invalid Code", "Code must be exactly 6 digits.");
-    return;
-  }
+    if (code.length !== 6) {
+      Alert.alert("Invalid Code", "Code must be exactly 6 digits.");
+      return;
+    }
 
-  if (!email) {
-    Alert.alert("Error", "Email not found. Please restart the process.");
-    setStep(1);
-    return;
-  }
+    if (!email) {
+      Alert.alert("Error", "Email not found. Please restart the process.");
+      setStep(1);
+      return;
+    }
 
-  // Simulate token validation (since it's tied to email in your logic)
-  setToken(code);
-  Alert.alert("Code Verified", "You may now reset your password.");
-  setTimeout(() => {
-    setStep(3);
-  }, 1500);
-};
+    setToken(code);
+    Alert.alert("Code Verified", "You may now reset your password.");
+    setTimeout(() => setStep(3), 1500);
+  };
 
-
-  const handlePasswordSubmit = (
-    password: string,
-    password_confirmation: string
-  ) => {
+  const handlePasswordSubmit = (password: string, password_confirmation: string) => {
     if (password !== password_confirmation) {
       Alert.alert("Error", "Passwords do not match.");
       return;
     }
-    console.log("Submitting password reset");
-    console.log(token);
+
     resetPassword(
       { token, password, password_confirmation },
-
       {
         onSuccess: () => {
           Alert.alert("Success", "Password has been reset.", [
@@ -98,16 +73,11 @@ const handleEmailSubmit = (emailInput: string) => {
           ]);
         },
         onError: (error: any) => {
-          console.log("[Reset Error]", error?.response?.data);
-          Alert.alert(
-            "Error",
-            error?.response?.data?.message || "Failed to reset password."
-          );
+          Alert.alert("Error", error?.response?.data?.message || "Failed to reset password.");
         },
       }
     );
   };
- 
   return (
     <ThemedView
       style={[styles.container, { backgroundColor: theme.background }]}

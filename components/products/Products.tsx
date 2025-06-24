@@ -1,7 +1,5 @@
 import { Colors } from '@/constants/Colors';
-import { useProducts } from '@/hooks/useProducts';
-import { Feather } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -18,18 +16,41 @@ import { SearchBar } from '../common/SearchBar';
 import { ThemedView } from '../ThemedView';
 import { CustomOutlineButton } from '../ui/CustomOutlineButton';
 import { router } from 'expo-router';
-import { useProductCategories } from '@/hooks/useCategories';
 import { useOutlet } from '@/context/outletContext'; // ✅ add this
+import { getUser } from '@/lib/tokenStorage';
+import { useProducts } from '@/mutation/useProducts';
+import { useProductCategories } from '@/mutation/useCategory';
 
 export default function Products() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const { width } = useWindowDimensions();
+  const { activeOutlet } = useOutlet();
+
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isUserLoaded, setIsUserLoaded] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const { activeOutlet } = useOutlet(); // ✅ use context to get active outlet
+  useEffect(() => {
+    const fetchUser = async () => {
+      const user = await getUser();
+      setUserId(user?.id ?? null);
+      setIsUserLoaded(true);
+    };
+    fetchUser();
+  }, []);
+
+  const { data: products, isLoading, error } = useProducts(activeOutlet ?? "", userId);
+
+  const {
+    data: categories,
+    isLoading: isCategoriesLoading,
+    error: categoriesError,
+  } = useProductCategories(activeOutlet ?? "");
+
+  const toggleFilter = () => setFilterOpen(!filterOpen);
 
   const handleFilterSelect = (option: string) => {
     setSelectedFilter(option);
@@ -37,22 +58,6 @@ export default function Products() {
       setFilterOpen(false);
     }
   };
-  if (!activeOutlet) {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Loading outlet...</Text>
-    </View>
-  );
-}
-
-  const { data, isLoading, error } = useProducts(activeOutlet);
-  const {
-    data: categories,
-    isLoading: isCategoriesLoading,
-    error: categoriesError,
-  } = useProductCategories(activeOutlet);
-
-  const toggleFilter = () => setFilterOpen(!filterOpen);
 
   const filterOptions = [
     'Price: Low to High',
@@ -64,6 +69,30 @@ export default function Products() {
 
   const numColumns = width > 768 ? 3 : width > 480 ? 2 : 1;
   const cardWidth = (width - 60 - (numColumns - 1) * 16) / numColumns;
+
+  if (!activeOutlet || !isUserLoaded) {
+    return (
+      <View style={styles.center}>
+        <Text>Loading outlet...</Text>
+      </View>
+    );
+  }
+
+  if (isLoading || isCategoriesLoading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={theme.tint} />
+      </View>
+    );
+  }
+
+  if (error || categoriesError) {
+    return (
+      <View style={styles.center}>
+        <Text style={{ color: 'red' }}>Failed to load data.</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -107,27 +136,36 @@ export default function Products() {
         </Text>
       )}
 
-      {!isLoading && data && (
-        <ThemedView style={styles.gridContainer}>
-          {data.map((item: any) => (
-            <ThemedView key={item.id} style={[styles.cardWrapper, { width: cardWidth }]}>
-              <Card
-                image={{ uri: item.image_url }}
-                title={item.title}
-                favorites={item.favorites}
-                amount={`₦${item.price}`}
-                stock={item.stock}
-                onPress={() =>
-                  router.push({ pathname: '/product/[id]', params: { id: String(item.id) } })
-                }
-                outlet={activeOutlet}
-                isLoggedIn={false}
-                onLoginPrompt={() => alert('Please log in to continue')}
-              />
-            </ThemedView>
-          ))}
-        </ThemedView>
-      )}
+     {!isLoading && isUserLoaded && products && (
+  <ThemedView style={styles.gridContainer}>
+    {products.map((item: any) => (
+      <ThemedView key={item.id} style={[styles.cardWrapper, { width: cardWidth }]}>
+        <Card
+          image={{ uri: item.image_url }}
+          title={item.title}
+          favorites={item.favorites}
+  likedByUser={item.liked_by_user} // ← from API
+  isLoggedIn={!!userId}
+  onLoginPrompt={() => alert('Login to like items')}
+  onToggleLike={() => {
+    // optional mutation logic here
+  }}
+
+         
+          amount={`₦${item.price}`}
+          stock={item.stock}
+          onPress={() =>
+            router.push({ pathname: '/product/[id]', params: { id: String(item.id) } })
+          }
+          outlet={activeOutlet}
+        
+        
+        />
+      </ThemedView>
+    ))}
+  </ThemedView>
+)}
+
 
       <CustomOutlineButton
         title="Have any Questions? Send us a message"
@@ -176,5 +214,10 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderRadius: 20,
     marginBottom: 10,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

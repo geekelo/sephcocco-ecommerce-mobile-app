@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { Feather, Entypo } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
-import { useProductCategories } from '@/hooks/useCategories';
+import { useOutlet } from '@/context/outletContext';
+import { useProductCategories } from '@/mutation/useCategory';
 
 interface SearchBarProps {
   onFilterToggle?: () => void;
@@ -31,9 +32,9 @@ export function SearchBar({
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const themedStyles = getThemedStyles(theme);
-  const activeOutlet = "restaurant"; 
+  const { activeOutlet } = useOutlet(); // ✅ dynamic activeOutlet
 
-const { data: categories, isLoading, error } = useProductCategories(activeOutlet);
+  const { data: categories, isLoading, error } = useProductCategories(activeOutlet ?? "");
 
 
   console.log('Fetched Categories:', categories);

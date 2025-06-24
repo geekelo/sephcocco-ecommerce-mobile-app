@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   View,
@@ -15,10 +15,14 @@ import { Colors } from "@/constants/Colors";
 import { ThemedView } from "../ThemedView";
 import CustomButton from "../ui/CustomButton";
 import { router } from "expo-router";
+import { getUser } from "@/lib/tokenStorage";
+import { useCreateOrder } from "@/mutation/useOrders";
+import { useOutlet } from "@/context/outletContext";
 
 const BillingDetails = () => {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? "light"];
+  const { activeOutlet } = useOutlet();
   const [filterOpen, setFilterOpen] = useState(false);
   const [shipToDifferentAddress, setShipToDifferentAddress] = useState(false);
   const [receiveEmails, setReceiveEmails] = useState(false);
@@ -30,6 +34,20 @@ const BillingDetails = () => {
     "Categories",
     "Rating",
   ];
+  
+const [userId, setUserId] = useState<string | null>(null);
+const [isUserLoaded, setIsUserLoaded] = useState(false);
+
+useEffect(() => {
+  const fetchUser = async () => {
+    const user = await getUser();
+    setUserId(user?.id ?? null);
+    setIsUserLoaded(true);
+  };
+  fetchUser();
+}, []);
+const { mutate: createOrder, isPending: isCreating } = useCreateOrder(activeOutlet ?? "");
+
 
   const toggleFilter = () => {
     setFilterOpen(!filterOpen);
@@ -188,11 +206,24 @@ const BillingDetails = () => {
 
         <View style={{ paddingVertical: 30 }}>
           <CustomButton
-            text="Place an Order"
-            onPress={() => {
-              router.push("/Payment");
-            }}
-          />
+  text={isCreating ? "Placing Order..." : "Place an Order"}
+  disabled={!isUserLoaded || isCreating}
+  onPress={() => {
+    if (!userId) return;
+
+    cartItems.forEach((item) => {
+      createOrder({
+        user_id: userId,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        outlet: activeOutlet ?? "",
+      });
+    });
+
+    router.push("/Payment");
+  }}
+/>
+
         </View>
       </ThemedView>
     </ScrollView>
