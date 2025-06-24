@@ -10,12 +10,13 @@ import { Routes } from "@/routes";
 
 export default function PharmacyPage() {
   const { activeOutlet } = useOutlet();
-  const { user } = useAuth(); // ⬅️ isLoggedIn = Boolean(user)
+  const { user } = useAuth();
 
   const isLoggedIn = !!user;
+  const userId = user?.id ?? null; // ✅ extract userId safely
 
   const handleLoginPrompt = () => {
-    router.push(Routes.auth.login); // or use a modal
+    router.push(Routes.auth.login);
   };
 
   return (
@@ -31,11 +32,13 @@ export default function PharmacyPage() {
           <ProductList
             outlet="pharmacy"
             isLoggedIn={isLoggedIn}
+            userId={userId} // ✅ pass userId
             onLoginPrompt={handleLoginPrompt}
           />
           <TopSeller
             outlet="pharmacy"
             isLoggedIn={isLoggedIn}
+           
             onLoginPrompt={handleLoginPrompt}
           />
         </>

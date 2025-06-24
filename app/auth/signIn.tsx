@@ -7,52 +7,54 @@ import CustomButton from '@/components/ui/CustomButton';
 import { Colors } from '@/constants/Colors';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
-import { useLogin } from '@/hooks/useLogin'; // ✅ Import the mutation hook
+import { useQueryClient } from '@tanstack/react-query';
+import { getUser } from '@/lib/tokenStorage'; // assumes you have this helper
+import { useLogin } from '@/mutation/useAuth';
 
 export default function SigninScreen() {
-  const colorScheme = useColorScheme();
+   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
+  const queryClient = useQueryClient();
 
   const [email, setEmail] = useState('');
-  
-
-  const loginMutation = useLogin();
+  const { mutate: login, isPending } = useLogin();
 
   const handleLogin = () => {
-    if (!email ) {
-      Alert.alert('Missing Fields', 'Please enter email');
+    if (!email) {
+      Alert.alert('Missing Fields', 'Please enter your email.');
       return;
     }
 
-    loginMutation.mutate(
+    login(
       { email },
       {
-        onSuccess: (data) => {
-          const { user, token } = data;
-          console.log('Login successful:', user, token);
-           Alert.alert('User Logged in Successfully');
+        onSuccess: async () => {
+          Alert.alert('Success', 'User logged in successfully.');
+          const currentUser = await getUser();
+          queryClient.invalidateQueries({ queryKey: ['products', currentUser?.id] });
           router.push('/storeSelection');
         },
         onError: (error: any) => {
-          console.error(error);
-          console.log(error)
-          Alert.alert('Login Failed', error?.response?.data?.message || 'Something went wrong');
+          Alert.alert(
+            'Login Failed',
+            error?.response?.data?.message || 'Something went wrong.'
+          );
         },
       }
     );
   };
 
+
   return (
     <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.imageWrapper}>
-        <Image
-          source={require('@/assets/images/SEPHCOCO LOUNGE 3.png')}
-          style={styles.logo}
-        />
+        <Image source={require('@/assets/images/SEPHCOCO LOUNGE 3.png')} style={styles.logo} />
       </View>
+
       <ThemedText type="subtitle" style={{ color: theme.text, textAlign: 'center' }}>
         Welcome Back!!
       </ThemedText>
+
       <View style={styles.form}>
         <InputField
           label="Email Address"
@@ -60,23 +62,26 @@ export default function SigninScreen() {
           value={email}
           onChangeText={setEmail}
         />
-       
+
         <CustomButton
-          text={loginMutation.isPending ? <ActivityIndicator /> : 'Sign In Now'}
+          text={isPending ? <ActivityIndicator /> : 'Sign In Now'}
           onPress={handleLogin}
-          disabled={loginMutation.isPending}
+          disabled={isPending}
         />
+
         <Text style={[styles.loginText, { color: theme.text }]}>
           Don’t have an account?{' '}
           <Link style={[styles.loginLink, { color: theme.success }]} href="/auth/signup">
             Sign up
           </Link>
-          </Text>
-          
-          <Link style={[styles.loginLink, { color: '#880808', textAlign:'center'}]} href="/auth/forgotPassword">
-            Forgot Password?
-          </Link>
-        
+        </Text>
+
+        <Link
+          style={[styles.loginLink, { color: '#880808', textAlign: 'center' }]}
+          href="/auth/forgotPassword"
+        >
+          Forgot Password?
+        </Link>
       </View>
     </ThemedView>
   );
