@@ -53,10 +53,10 @@ const { mutate: createOrder, isPending: isCreating } = useCreateOrder(activeOutl
     setFilterOpen(!filterOpen);
   };
   const orderItems = [
-    { name: "Modern Sofa", price: 230 },
-    { name: "Wooden Chair", price: 120 },
-    { name: "Floor Lamp", price: 80 },
-    { name: "Coffee Table", price: 150 },
+    { name: "Modern Sofa", price: 230 , product_id:"1", quantity:2},
+    { name: "Wooden Chair", price: 120,product_id:"2", quantity:2 },
+    { name: "Floor Lamp", price: 80, product_id:"3", quantity:2 },
+    { name: "Coffee Table", price: 150,product_id:"4", quantity:2 },
   ];
 
   const orderTotal = orderItems.reduce((sum, item) => sum + item.price, 0);
@@ -211,7 +211,7 @@ const { mutate: createOrder, isPending: isCreating } = useCreateOrder(activeOutl
   onPress={() => {
     if (!userId) return;
 
-    cartItems.forEach((item) => {
+    orderItems.forEach((item) => {
       createOrder({
         user_id: userId,
         product_id: item.product_id,
