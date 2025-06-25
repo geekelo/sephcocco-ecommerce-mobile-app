@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,9 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Colors } from '@/constants/Colors';
+import { useOutlet } from '@/context/outletContext';
+import { getUser } from '@/lib/tokenStorage';
+import { useGetAllOrders } from '@/mutation/useOrders';
 const orders = [
   {
     id: '1',
@@ -34,10 +37,30 @@ const OrdersScreen = () => {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const navigation = useNavigation();
+  const { activeOutlet } = useOutlet();
+const [userId, setUserId] = useState<string | null>(null);
 
+useEffect(() => {
+  getUser().then(user => setUserId(user?.id ?? null));
+}, []);
+
+const { data: allOrders, isLoading, isError } = useGetAllOrders(activeOutlet ?? "", userId);
+const filteredOrder = (allOrders ?? []).filter((order) =>
+  activeTab === "Pending" ? order.status === "Pending" : order.status === "Completed"
+);
+
+
+console.log(filteredOrder)
   const filteredOrders = orders.filter(order => 
     activeTab === 'Pending' ? order.status === 'Pending' : order.status === 'Completed'
   );
+if (isLoading) {
+  return <Text>Loading orders...</Text>;
+}
+
+if (isError) {
+  return <Text>Error fetching orders.</Text>;
+}
 
   return (
     <View style={styles.container}>

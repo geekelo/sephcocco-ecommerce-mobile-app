@@ -8,22 +8,22 @@ import {
   TouchableOpacity,
   Platform,
   Text,
+  ActivityIndicator,
 } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { Colors } from "@/constants/Colors";
 import { Layout } from "@/components/layout/Layout";
 import { SearchBar } from "@/components/common/SearchBar";
-import { useState } from "react";
-import { productData } from "@/components/common/ProductData";
+import { useEffect, useState } from "react";
 import CustomButton from "@/components/ui/CustomButton";
 import { CustomOutlineButton } from "@/components/ui/CustomOutlineButton";
 import {  Ionicons } from "@expo/vector-icons";
 import { StarRating } from "@/components/common/ratingCard";
-import SimilarProducts from "@/components/products/similarProducts";
 import { Dimensions } from "react-native";
-import { useProductById } from "@/hooks/useProductsId";
 import { useOutlet } from "@/context/outletContext";
+import { getUser } from "@/lib/tokenStorage";
+import { useProductById } from "@/mutation/useProducts";
 
 const { width } = Dimensions.get("window");
 type SimilarProduct = {
@@ -49,57 +49,63 @@ type Product =
       similar: SimilarProduct[];
     }
   | undefined;
-
 export default function ProductDetail() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams(); // id is string | string[] | undefined
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? "light"];
   const navigation = useNavigation();
-  
-    const { activeOutlet } = useOutlet(); 
-  console.log(activeOutlet)
-
+  const { activeOutlet } = useOutlet();
   const [filterOpen, setFilterOpen] = useState(false);
-if (!activeOutlet) {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Loading outlet...</Text>
-    </View>
-  );
-}
-  // Assuming productData is imported and available
- const { data: product, isLoading, isError } = useProductById(activeOutlet, String(id));
-console.log(product)
+  const [userId, setUserId] = useState<string | null>(null);
+
+  const productId = typeof id === "string" ? id : null;
+
+  useEffect(() => {
+    getUser().then((user) => setUserId(user?.id ?? null));
+  }, []);
+
+  // 🚫 Don't call hook if required data is missing
+  const {
+    data: product,
+    isLoading,
+    isError,
+  } = useProductById(activeOutlet ?? "", productId ?? "");
+
+  if (!activeOutlet || !productId) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>Loading outlet or product ID...</Text>
+      </View>
+    );
+  }
+
+  const handleLike = () => {
+    if (!userId) {
+      return alert("Please log in to like products.");
+    }
+
+    // TODO: Trigger like mutation here
+  };
 
   const toggleFilter = () => setFilterOpen(!filterOpen);
 
-  if (!product) {
+  if (isLoading) {
+    return (
+      <Layout>
+        <ActivityIndicator size="large" color={theme.tint} style={{ marginTop: 40 }} />
+      </Layout>
+    );
+  }
+
+  if (isError || !product) {
     return (
       <Layout>
         <ThemedText style={{ padding: 20, color: "red" }}>
-          Product not found.
+          Failed to load product.
         </ThemedText>
       </Layout>
     );
   }
-  if (isLoading) {
-  return (
-    <Layout>
-      <ThemedText style={{ padding: 20 }}>Loading...</ThemedText>
-    </Layout>
-  );
-}
-
-if (isError) {
-  return (
-    <Layout>
-      <ThemedText style={{ padding: 20, color: "red" }}>
-        Failed to load product.
-      </ThemedText>
-    </Layout>
-  );
-}
-
 
   const filterOptions = [
     "Price: Low to High",
@@ -108,6 +114,8 @@ if (isError) {
     "Categories",
     "Rating",
   ];
+
+  
   return (
     <Layout>
       <View style={{ flex: 1 }}>
