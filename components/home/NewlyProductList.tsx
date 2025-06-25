@@ -14,30 +14,23 @@ import {
 } from 'react-native';
 import { Card } from '../common/ProductCard';
 import { router } from 'expo-router';
-import { useProducts } from '@/hooks/useProducts';
 import axios from 'axios';
-
+import { useProducts } from '@/mutation/useProducts';
 type ProductListProps = {
   outlet: 'pharmacy' | 'restaurant' | 'lounge';
   isLoggedIn: boolean;
   onLoginPrompt?: () => void;
+  userId: string | null; // ✅ Add this
 };
 
-export default function ProductList({ outlet, isLoggedIn, onLoginPrompt }: ProductListProps) {
-  const colorScheme = useColorScheme();
+
+export default function ProductList({ outlet, isLoggedIn, onLoginPrompt, userId }: ProductListProps) {
+ const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const { width } = useWindowDimensions();
 
-  // Fetch products for the outlet
-  const { data, isLoading, error } = useProducts(outlet);
+  const { data, isLoading, error } = useProducts(outlet, userId);
 
-  // Debug logs
-  console.log('[ProductList] useProducts → isLoading:', isLoading);
-  console.log('[ProductList] useProducts → error:', error);
-  console.log('[ProductList] useProducts → data:', data);
-
-
-  // Responsive number of columns for product cards
   const numColumns = width > 768 ? 3 : width > 300 ? 2 : 1;
   const cardWidth = (width - 60 - (numColumns - 1) * 16) / numColumns;
 
@@ -69,21 +62,28 @@ export default function ProductList({ outlet, isLoggedIn, onLoginPrompt }: Produ
         {data?.map((item: any) => (
           <View key={item.id} style={[styles.cardWrapper, { width: cardWidth }]}>
             <Card
-              image={{ uri: item.image_url }}
-              title={item.name}
-              favorites={item.likes}
-              amount={`₦${item.price}`}
-              stock={item.stock}
-              outlet={item.outlet}
-              isLoggedIn={isLoggedIn}
-              onLoginPrompt={onLoginPrompt}
-              onPress={() =>
-                router.push({
-                  pathname: '/product/[id]',
-                  params: { id: String(item.id) },
-                })
-              }
-            />
+  image={{ uri: item.image_url }}
+  title={item.name}
+  favorites={item.likes}
+  amount={`₦${item.price}`}
+  stock={item.stock}
+  outlet={item.outlet}
+  isLoggedIn={isLoggedIn}
+  likedByUser={item.liked_by_user} // ✅ assuming API returns this field
+  onLoginPrompt={onLoginPrompt}
+  onToggleLike={() => {
+    if (!isLoggedIn) return;
+    // You can later wire this to a mutation hook
+    console.log('Toggle like for product ID:', item.id);
+  }}
+  onPress={() =>
+    router.push({
+      pathname: '/product/[id]',
+      params: { id: String(item.id) },
+    })
+  }
+/>
+
           </View>
         ))}
       </View>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, useColorScheme } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -8,20 +8,66 @@ import { useLocalSearchParams } from 'expo-router';
 import { orders } from '@/components/order/ordersdata';
 import { Layout } from '@/components/layout/Layout';
 import { Colors } from '@/constants/Colors';
+import { getUser } from '@/lib/tokenStorage';
+import { useOutlet } from '@/context/outletContext';
+import { useGetOrderById } from '@/mutation/useOrders';
 
 const OrderDetails = () => {
   const navigation = useNavigation();
   const colorScheme = useColorScheme();
     const theme = Colors[colorScheme ?? "light"];
   const route = useRoute();
+
    const { orderId } = useLocalSearchParams();
-  
+  const [userId, setUserId] = useState<string | null>(null);
+
+useEffect(() => {
+  getUser().then(user => setUserId(user?.id ?? null));
+}, []);
+const { activeOutlet } = useOutlet();
+const { data: orderdata, isLoading, isError } = useGetOrderById(
+  activeOutlet ??  "",
+  String(orderId),
+  userId
+);
+console.log(orderdata)
+
   const order = orders.find(o => o.id.toString() === orderId) || orders[0];
   
   const handleBack = () => {
     navigation.goBack();
   };
   
+  if (!activeOutlet || !orderId || !userId) {
+  return (
+    <Layout>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading data...</Text>
+      </View>
+    </Layout>
+  );
+}
+
+if (isLoading) {
+  return (
+    <Layout>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Fetching order details...</Text>
+      </View>
+    </Layout>
+  );
+}
+
+if (isError || !order) {
+  return (
+    <Layout>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Failed to load order.</Text>
+      </View>
+    </Layout>
+  );
+}
+
   return (
     <Layout>
     <View style={[styles.container, {backgroundColor:theme.background}]} >

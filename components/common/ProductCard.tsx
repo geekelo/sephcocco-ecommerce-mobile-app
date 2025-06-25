@@ -6,18 +6,20 @@ import { ThemedText } from '../ThemedText';
 import { Colors } from '@/constants/Colors';
 import { Alert } from 'react-native';
 
-
 interface ProductCardProps {
   image: any;
   title: string;
   favorites: number;
   amount: string;
   stock: number;
-  outlet?: string; 
+  outlet?: string;
   onPress?: () => void;
-  isLoggedIn: boolean; // <-- new prop to track login status
-  onLoginPrompt?: () => void; // optional callback if you want to handle login flow externally
+  isLoggedIn: boolean;
+  onLoginPrompt?: () => void;
+  likedByUser?: boolean; // ✅ new
+  onToggleLike?: () => void; // ✅ optional toggle handler
 }
+
 
 export function Card({
   image,
@@ -29,6 +31,8 @@ export function Card({
   onPress,
   isLoggedIn,
   onLoginPrompt,
+  onToggleLike,
+  likedByUser,
 }: ProductCardProps) {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
@@ -65,8 +69,27 @@ export function Card({
           <ThemedText style={styles.title} fontFamily="Raleway-Regular">{title}</ThemedText>
   
           <ThemedView style={styles.favContainer}>
-            <AntDesign name="hearto" size={10} color={theme.orange} />
-            <ThemedText style={styles.favText} fontFamily="Raleway-Regular">{favorites}</ThemedText>
+           <TouchableOpacity
+  onPress={() => {
+    if (!isLoggedIn) {
+      onLoginPrompt?.();
+    } else {
+      onToggleLike?.();
+    }
+  }}
+  style={styles.favContainer}
+  hitSlop={10}
+>
+  <AntDesign
+    name={likedByUser ? 'heart' : 'hearto'}
+    size={10}
+    color={likedByUser ? theme.pink : theme.orange}
+  />
+  <ThemedText style={styles.favText} fontFamily="Raleway-Regular">
+    {favorites}
+  </ThemedText>
+</TouchableOpacity>
+
           </ThemedView>
         </ThemedView>
 

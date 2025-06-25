@@ -16,10 +16,10 @@ import InputField from '@/components/ui/InputField';
 import CustomButton from '@/components/ui/CustomButton';
 import { Colors } from '@/constants/Colors';
 import { Link, router } from 'expo-router';
-import { useSignup } from '@/hooks/useSignup';
+import { useSignup } from '@/mutation/useAuth';
 
 export default function SignupScreen() {
-  const colorScheme = useColorScheme();
+ const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
 
   const [name, setName] = useState('');
@@ -30,15 +30,20 @@ export default function SignupScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const signupMutation = useSignup();
+  const { mutate: signup, isPending } = useSignup();
 
   const handleSignup = () => {
+    if (!name || !address || !email || !phoneNumber || !whatsappNumber || !password) {
+      Alert.alert('Missing Fields', 'Please fill all required fields.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
-    signupMutation.mutate(
+    signup(
       {
         name,
         address,
@@ -53,11 +58,15 @@ export default function SignupScreen() {
           router.push('/auth/signIn');
         },
         onError: (error: any) => {
-          Alert.alert('Error', error.response?.data?.message || 'Failed to sign up');
+          Alert.alert(
+            'Error',
+            error?.response?.data?.message || 'Failed to sign up'
+          );
         },
       }
     );
   };
+
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -131,9 +140,9 @@ export default function SignupScreen() {
             />
 
             <CustomButton
-              text={signupMutation.isPending ? 'Signing Up...' : 'Sign Up Now'}
+              text={isPending ? 'Signing Up...' : 'Sign Up Now'}
               onPress={handleSignup}
-              disabled={signupMutation.isPending}
+              disabled={isPending}
             />
             <Text style={[styles.loginText, { color: theme.text }]}>
               Already have an account?{' '}
