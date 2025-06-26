@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  Alert,
 } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
@@ -13,6 +14,8 @@ import { getStatusStyle, OrderStatusBadge } from './orderStatus';
 import { Checkbox } from '../ui/checker';
 import { Order } from '../types/types';
 import { Ionicons } from '@expo/vector-icons';
+import { useDeleteOrder, useUpdateOrder } from '@/mutation/useOrders';
+import { useOutlet } from '@/context/outletContext';
 
 
 const { width, height } = Dimensions.get('window');
@@ -21,7 +24,8 @@ interface OrderItemProps {
   index: number;
   onpress?: () => void;
   checked?: boolean;
-  onSeeMorePress?: () => void; // optional callback for see more details
+  userId: string;
+  outlet: string;
 }
 
 export const OrderItem: React.FC<OrderItemProps> = ({
@@ -29,12 +33,13 @@ export const OrderItem: React.FC<OrderItemProps> = ({
   index,
   onpress,
   checked = false,
-  onSeeMorePress,
+  userId,
+  outlet
 }) => {
   const navigation = useNavigation<NavigationProp<any>>();
   const [quantity, setQuantity] = React.useState(1);
   const [isSelected, setIsSelected] = React.useState(checked);
-
+ const { activeOutlet } = useOutlet();
   React.useEffect(() => {
     setIsSelected(checked);
   }, [checked]);
@@ -42,18 +47,96 @@ export const OrderItem: React.FC<OrderItemProps> = ({
   const increment = () => setQuantity((q) => q + 1);
   const decrement = () => setQuantity((q) => (q > 1 ? q - 1 : q));
 
-  const toggleCheckbox = () => {
-    const newChecked = !isSelected;
-    setIsSelected(newChecked);
-    if (onpress) onpress();
-  };
+const toggleCheckbox = () => {
+  const newChecked = !isSelected;
+  setIsSelected(newChecked);
+  try {
+    onpress?.(); // Safe optional chaining
+  } catch (error) {
+    console.warn("Checkbox toggle failed:", error);
+  }
+};
+
 
   const totalPrice = (order.price * quantity).toFixed(2);
   const borderColors = getStatusStyle(order.status);
+const [isEditing, setIsEditing] = React.useState(false);
 
   // Normalize status string to check for 'indelivery' ignoring spaces and case
   const normalizedStatus = order.status.toLowerCase().replace(/\s/g, '');
   const isInDelivery = normalizedStatus === 'indelivery';
+const updateMutation = useUpdateOrder(outlet);
+const deleteMutation = useDeleteOrder(outlet);
+const handleEditToggle = () => {
+  if (isEditing) {
+    // Now submitting the update
+    handleEdit();
+  } else {
+    // Switching to edit mode
+    setQuantity(order?.quantity); // preload current quantity
+  }
+  setIsEditing(!isEditing);
+};
+
+const handleEdit = () => {
+  updateMutation.mutate(
+    {
+      id: order.id,
+      user_id: userId,
+      quantity,
+      outlet,
+    },
+    {
+      onSuccess: (data) => {
+        Alert.alert('Success', 'Order updated successfully.');
+        console.log(data)
+      },
+      onError: () => {
+        Alert.alert('Error', 'Failed to update order.');
+      },
+    }
+  );
+};
+
+const confirmDelete = () => {
+  Alert.alert(
+    'Confirm Delete',
+    'Are you sure you want to delete this order?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: handleDelete,
+      },
+    ]
+  );
+};
+
+const handleDelete = () => {
+  deleteMutation.mutate(order?.id, {
+    onSuccess: (data) => {
+      Alert.alert('Deleted', 'Order was deleted successfully.');
+      console.log(data)
+    },
+    onError: () => {
+      Alert.alert('Error', 'Failed to delete order.');
+    },
+  });
+};
+const getImageSource = () => {
+  const uri = order.products?.[0]?.main_image_url;
+
+  if (uri && typeof uri === 'string') {
+    return { uri }; // remote image
+  }
+
+  if (typeof order.image === 'number') {
+    return order.image; // local asset number like require('...')
+  }
+
+  return require('@/assets/images/logo.png'); // default fallback
+};
 
   return (
     <Animated.View
@@ -65,7 +148,10 @@ export const OrderItem: React.FC<OrderItemProps> = ({
       ]}
     >
       <View style={styles.imageContainer}>
-        <Image source={order.image} style={styles.image} />
+   <Image source={getImageSource()} style={styles.image} />
+
+
+
         <View style={styles.checkboxContainer}>
           <Checkbox
             checked={isSelected}
@@ -82,29 +168,60 @@ export const OrderItem: React.FC<OrderItemProps> = ({
         <OrderStatusBadge status={order.status} />
 
        
-            <View style={styles.quantityContainer}>
-              <Text style={styles.statusText}>Quantity:</Text>
-              <TouchableOpacity onPress={decrement} style={styles.qtyBtn}>
-                <Text style={styles.qtyBtnText}>-</Text>
-              </TouchableOpacity>
-              <Text style={styles.quantityText}>{quantity}</Text>
-              <TouchableOpacity onPress={increment} style={styles.qtyBtn}>
-                <Text style={styles.qtyBtnText}>+</Text>
-              </TouchableOpacity>
-            </View>
+           {isEditing && (
+  <View style={styles.quantityContainer}>
+    <Text style={styles.statusText}>Quantity:</Text>
+    <TouchableOpacity onPress={decrement} style={styles.qtyBtn}>
+      <Text style={styles.qtyBtnText}>-</Text>
+    </TouchableOpacity>
+    <Text style={styles.quantityText}>{quantity}</Text>
+    <TouchableOpacity onPress={increment} style={styles.qtyBtn}>
+      <Text style={styles.qtyBtnText}>+</Text>
+    </TouchableOpacity>
+  </View>
+)}
+{!isEditing && (
+  <View style={styles.quantityContainer}>
+    <Text style={styles.statusText}>Quantity: {order.quantity}</Text>
+  </View>
+)}
+
 
             <View style={styles.priceContainer}>
               <View style={styles.priceRow}>
                 <Text style={styles.priceTitle}>Unit Price:</Text>
-                <Text style={styles.priceValue}>${order.price.toFixed(2)}</Text>
+                <Text style={styles.priceValue}>₦ {order.price}</Text>
               </View>
               <View style={styles.priceRow}>
                 <Text style={styles.priceTitle}>Total:</Text>
                 <Text style={[styles.priceValue, { color: 'red' }]}>
-                  ${totalPrice}
+                  ₦ {totalPrice}
                 </Text>
               </View>
             </View>
+            <View style={styles.actionButtons}>
+ <TouchableOpacity
+  style={styles.editBtn}
+  onPress={handleEditToggle}
+>
+  <Ionicons
+    name={isEditing ? 'checkmark-outline' : 'create-outline'}
+    size={18}
+    color="#fff"
+  />
+  <Text style={styles.actionText}>
+    {isEditing ? 'Update' : 'Edit'}
+  </Text>
+</TouchableOpacity>
+
+
+
+  <TouchableOpacity style={styles.deleteBtn} onPress={confirmDelete}>
+    <Ionicons name="trash-outline" size={18} color="#fff" />
+    <Text style={styles.actionText}>Delete</Text>
+  </TouchableOpacity>
+</View>
+
         
       </View>
     </Animated.View>
@@ -226,4 +343,33 @@ const styles = StyleSheet.create({
     marginRight: 4,
     fontSize: 14,
   },
+  actionButtons: {
+  flexDirection: 'row',
+  justifyContent: 'flex-end',
+  marginTop: 16,
+  gap: 12,
+},
+editBtn: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#4CAF50',
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+  borderRadius: 6,
+},
+deleteBtn: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#f44336',
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+  borderRadius: 6,
+},
+actionText: {
+  color: '#fff',
+  marginLeft: 6,
+  fontWeight: '600',
+  fontSize: 14,
+},
+
 });

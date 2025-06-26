@@ -16,9 +16,8 @@ import { ThemedView } from "../ThemedView";
 import CustomButton from "../ui/CustomButton";
 import { router } from "expo-router";
 import { getUser } from "@/lib/tokenStorage";
-import { useCreateOrder } from "@/mutation/useOrders";
+import { useCreateOrder, useGetAllOrders } from "@/mutation/useOrders";
 import { useOutlet } from "@/context/outletContext";
-
 const BillingDetails = () => {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? "light"];
@@ -27,6 +26,10 @@ const BillingDetails = () => {
   const [shipToDifferentAddress, setShipToDifferentAddress] = useState(false);
   const [receiveEmails, setReceiveEmails] = useState(false);
   const [saveInfo, setSaveInfo] = useState(false);
+  const [deliveryNote, setDeliveryNote] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isUserLoaded, setIsUserLoaded] = useState(false);
+
   const filterOptions = [
     "Price: Low to High",
     "Price: High to Low",
@@ -34,33 +37,60 @@ const BillingDetails = () => {
     "Categories",
     "Rating",
   ];
-  
-const [userId, setUserId] = useState<string | null>(null);
-const [isUserLoaded, setIsUserLoaded] = useState(false);
 
-useEffect(() => {
-  const fetchUser = async () => {
-    const user = await getUser();
-    setUserId(user?.id ?? null);
-    setIsUserLoaded(true);
+  useEffect(() => {
+    const fetchUser = async () => {
+      const user = await getUser();
+      setUserId(user?.id ?? null);
+      setIsUserLoaded(true);
+    };
+    fetchUser();
+  }, []);
+
+  const { mutate, isPending: isCreating , data} = useCreateOrder(activeOutlet ?? "");
+
+  const { data: orderItem = [], isLoading: isOrdersLoading } = useGetAllOrders(
+    activeOutlet ?? "",
+    userId
+  );
+
+  const toggleFilter = () => setFilterOpen(!filterOpen);
+
+  const orderTotal = orderItem.reduce((sum, item) => {
+    const itemPrice = Number(item?.price ?? 0);
+    const quantity = Number(item?.quantity ?? 1);
+    return sum + itemPrice * quantity;
+  }, 0);
+
+  const handlePlaceOrder = () => {
+    if (!userId || !activeOutlet) {
+      alert("Missing user or outlet.");
+      return;
+    }
+
+    if (!orderItem.length) {
+      alert("No items to order.");
+      return;
+    }
+
+    orderItem.forEach((item) => {
+      mutate({
+        product_id: item.id,
+        quantity: item.quantity,
+        outlet: activeOutlet,
+        address: "Sample Address, Nigeria",
+        phone_number: "08012345678",
+        additional_notes: deliveryNote,
+      });
+    });
+
+    alert("✅ Orders placed successfully!");
+    setTimeout(() => {
+      router.push("/Payment");
+    }, 500); // Delay for visual feedback
   };
-  fetchUser();
-}, []);
-const { mutate: createOrder, isPending: isCreating } = useCreateOrder(activeOutlet ?? "");
-
-
-  const toggleFilter = () => {
-    setFilterOpen(!filterOpen);
-  };
-  const orderItems = [
-    { name: "Modern Sofa", price: 230 , product_id:"1", quantity:2},
-    { name: "Wooden Chair", price: 120,product_id:"2", quantity:2 },
-    { name: "Floor Lamp", price: 80, product_id:"3", quantity:2 },
-    { name: "Coffee Table", price: 150,product_id:"4", quantity:2 },
-  ];
-
-  const orderTotal = orderItems.reduce((sum, item) => sum + item.price, 0);
-
+console.log('creating data', data)
+console.log(orderItem)
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <SearchBar
@@ -68,26 +98,19 @@ const { mutate: createOrder, isPending: isCreating } = useCreateOrder(activeOutl
         onFilterToggle={toggleFilter}
         filterOpen={filterOpen}
       />
-      {/* Header with back button */}
 
       <View style={styles.header}>
         <TouchableOpacity>
           <Ionicons name="arrow-back" size={10} color={theme.orange} />
         </TouchableOpacity>
-        <ThemedText
-          fontFamily="Raleway-Regular"
-          style={[styles.subtitle, { color: theme.orange }]}
-        >
+        <ThemedText style={[styles.subtitle, { color: theme.orange }]}>
           Go Back
         </ThemedText>
-        <View /> {/* Placeholder for spacing */}
+        <View />
       </View>
 
-      <ThemedText fontFamily="Raleway-Regular" style={styles.title}>
-        Billing Details
-      </ThemedText>
+      <ThemedText style={styles.title}>Billing Details</ThemedText>
 
-      {/* Grid Fields */}
       <View style={styles.grid2}>
         <View style={{ width: "48%" }}>
           <InputField label="First Name" required />
@@ -96,6 +119,7 @@ const { mutate: createOrder, isPending: isCreating } = useCreateOrder(activeOutl
           <InputField label="Last Name" required />
         </View>
       </View>
+
       <View style={styles.grid2}>
         <View style={{ width: "48%" }}>
           <InputField label="Country" />
@@ -105,72 +129,58 @@ const { mutate: createOrder, isPending: isCreating } = useCreateOrder(activeOutl
         </View>
       </View>
 
-      {/* Full-width fields */}
       <InputField label="Address" />
       <InputField label="Email" />
 
-      {/* Address Type Chips + Checkbox */}
       <View style={styles.addressToggleRow}>
-        <ThemedText fontFamily="Raleway-Regular" style={styles.label}>
-          Ship to a different address?
-        </ThemedText>
-        <TouchableOpacity
-          onPress={() => setShipToDifferentAddress(!shipToDifferentAddress)}
-        >
+        <ThemedText style={styles.label}>Ship to a different address?</ThemedText>
+        <TouchableOpacity onPress={() => setShipToDifferentAddress(!shipToDifferentAddress)}>
           <Ionicons
-            name={
-              shipToDifferentAddress ? "checkbox-outline" : "square-outline"
-            }
+            name={shipToDifferentAddress ? "checkbox-outline" : "square-outline"}
             size={20}
             color={theme.gray}
           />
         </TouchableOpacity>
       </View>
 
-      {/* Notes Textarea */}
       <View style={styles.wrapper}>
-        <ThemedText fontFamily="Raleway-Regular" style={styles.label}>
-          Delivery Note
-        </ThemedText>
+        <ThemedText style={styles.label}>Delivery Note</ThemedText>
         <TextInput
           multiline
+          value={deliveryNote}
+          onChangeText={setDeliveryNote}
           style={styles.textarea}
           placeholder="Write any notes..."
         />
       </View>
 
       <ThemedView style={{ paddingVertical: 50 }}>
-        {/* Order Summary */}
+        <ThemedText style={styles.orderTitle}>Your Order</ThemedText>
 
-        <ThemedText fontFamily="Raleway-Regular" style={styles.orderTitle}>
-          Your Order
-        </ThemedText>
-        {orderItems.map((item, index) => (
-          <View key={index} style={styles.orderItem}>
-            <ThemedText fontFamily="Raleway-Regular">{item.name}</ThemedText>
-            <ThemedText fontFamily="Raleway-Regular">
-              ${item.price.toFixed(2)}
-            </ThemedText>
-          </View>
-        ))}
+        {isOrdersLoading ? (
+          <ThemedText>Loading orders...</ThemedText>
+        ) : orderItem.length === 0 ? (
+          <ThemedText>No orders yet.</ThemedText>
+        ) : (
+          orderItem.map((item, index) => (
+            <View key={index} style={styles.orderItem}>
+              <ThemedText>{item.name}</ThemedText>
+              <ThemedText>
+                ₦{Number(item.price).toFixed(2)} × {item.quantity}
+              </ThemedText>
+            </View>
+          ))
+        )}
+
         <View style={styles.orderItem}>
-          <ThemedText
-            type="defaultSemiBold"
-            style={{ fontWeight: 700, fontSize: 16 }}
-            fontFamily="Raleway-Regular"
-          >
+          <ThemedText style={{ fontWeight: "700", fontSize: 16 }}>
             ORDER TOTAL
           </ThemedText>
-          <ThemedText
-            type="defaultSemiBold"
-            style={{ fontWeight: 700, fontSize: 16 }}
-            fontFamily="Raleway-Regular"
-          >
-            ${orderTotal.toFixed(2)}
+          <ThemedText style={{ fontWeight: "700", fontSize: 16 }}>
+            ₦{orderTotal.toFixed(2)}
           </ThemedText>
         </View>
 
-        {/* Checkboxes */}
         <View style={styles.checkboxRow}>
           <TouchableOpacity onPress={() => setReceiveEmails(!receiveEmails)}>
             <Ionicons
@@ -179,12 +189,8 @@ const { mutate: createOrder, isPending: isCreating } = useCreateOrder(activeOutl
               color={theme.gray}
             />
           </TouchableOpacity>
-          <ThemedText
-            fontFamily="Raleway-Regular"
-            style={{ color: "#4A4A4A", fontSize: 11 }}
-          >
-            I would like to receive exclusive emails with discounts and product
-            information
+          <ThemedText style={{ color: "#4A4A4A", fontSize: 11 }}>
+            I would like to receive exclusive emails with discounts and product info
           </ThemedText>
         </View>
 
@@ -196,39 +202,23 @@ const { mutate: createOrder, isPending: isCreating } = useCreateOrder(activeOutl
               color={theme.gray}
             />
           </TouchableOpacity>
-          <ThemedText
-            fontFamily="Raleway-Regular"
-            style={{ color: "#4A4A4A", fontSize: 11 }}
-          >
+          <ThemedText style={{ color: "#4A4A4A", fontSize: 11 }}>
             Save this information for next time
           </ThemedText>
         </View>
 
         <View style={{ paddingVertical: 30 }}>
           <CustomButton
-  text={isCreating ? "Placing Order..." : "Place an Order"}
-  disabled={!isUserLoaded || isCreating}
-  onPress={() => {
-    if (!userId) return;
-
-    orderItems.forEach((item) => {
-      createOrder({
-        user_id: userId,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        outlet: activeOutlet ?? "",
-      });
-    });
-
-    router.push("/Payment");
-  }}
-/>
-
+            text={isCreating ? "Placing Order..." : "Place an Order"}
+            disabled={!isUserLoaded || isCreating}
+            onPress={handlePlaceOrder}
+          />
         </View>
       </ThemedView>
     </ScrollView>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: { padding: 30 },

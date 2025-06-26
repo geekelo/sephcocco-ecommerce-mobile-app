@@ -32,7 +32,7 @@ export default function SigninScreen() {
           Alert.alert('Success', 'User logged in successfully.');
           const currentUser = await getUser();
           queryClient.invalidateQueries({ queryKey: ['products', currentUser?.id] });
-          router.push('/storeSelection');
+          router.push('/ProductPage');
         },
         onError: (error: any) => {
           Alert.alert(

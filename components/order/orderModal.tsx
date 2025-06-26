@@ -13,18 +13,20 @@ import { Feather } from '@expo/vector-icons';
 import OrderSummary from './orderSummary';
 import PaymentMethod from '../billing/paymentMethod';
 import { Product } from '../types/types';
-
 interface OrderModalProps {
   product: Product;
   visible: boolean;
   onClose: () => void;
+  outlet: string; // ✅ add this
 }
 
-const OrderModal: React.FC<OrderModalProps> = ({ product, visible, onClose }) => {
+
+const OrderModal: React.FC<OrderModalProps> = ({ product, visible, onClose,outlet }) => {
   const [quantity, setQuantity] = useState<number>(1);
+
   const [address, setAddress] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'orderSummary' | 'paymentMethod'>('orderSummary');
-
+console.log('orser', product)
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -65,12 +67,14 @@ const OrderModal: React.FC<OrderModalProps> = ({ product, visible, onClose }) =>
 >
   {activeTab === 'orderSummary' ? (
     <OrderSummary
-      product={product}
-      quantity={quantity}
-      setQuantity={setQuantity}
-      address={address}
-      setAddress={setAddress}
-    />
+  product={product}
+  quantity={quantity}
+  setQuantity={setQuantity}
+  address={address}
+  setAddress={setAddress}
+  outlet={outlet} // ✅ now passed correctly
+/>
+
   ) : (
     <PaymentMethod product={product} quantity={quantity} address={address} />
   )}

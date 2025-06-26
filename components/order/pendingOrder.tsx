@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -16,32 +16,49 @@ import { getSimilarOrderProducts, orders } from "../common/orderData";
 import { Order, SimilarProduct } from "../types/types";
 import { OrderItem } from "./orderItem";
 import { DeliveryItem } from "./deliveriItem";
+import { useOutlet } from "@/context/outletContext";
+import { useGetAllOrders, useGetPaidOrders, useGetPendingOrders } from "@/mutation/useOrders";
+import { getUser } from "@/lib/tokenStorage";
+import { DeliveryOrderItem } from "./deliverOrderItem";
 
 const { width } = Dimensions.get("window");
 
 const PendingOrders = () => {
   const navigation = useNavigation();
+  const { activeOutlet } = useOutlet();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState<"Unpaid" | "InDelivery">("Unpaid");
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
-  const [selectedTab, setSelectedTab] = useState<"Unpaid" | "InDelivery">(
-    "Unpaid"
-  );
   const [showOrderModal, setShowOrderModal] = useState(false);
 
-  // Filter orders by status
-  const unpaidOrders = orders.filter((order) =>
-    [
-      "Processing Order",
-      "Processing Payment",
-      "Awaiting Payment Confirmation",
-    ].includes(order.status)
-  );
-  const inDeliveryOrders = orders.filter(
-    (order) => order.status === "Delivering"
-  );
+  useEffect(() => {
+    getUser().then((user) => setUserId(user?.id ?? null));
+  }, []);
 
-  // Decide which orders to show based on selected tab
+  const {
+    data: unpaidOrdersData,
+    isLoading: loadingUnpaid,
+    error: unpaidError,
+  } = useGetPendingOrders(activeOutlet ?? "", userId);
+
+  const {
+    data: deliveryOrdersData,
+    isLoading: loadingDelivery,
+    error: deliveryError,
+  } = useGetPaidOrders(activeOutlet ?? "", userId);
+
+  const unpaidOrders = unpaidOrdersData ?? [];
+  const inDeliveryOrders = deliveryOrdersData ?? [];
+console.log('unpaid',unpaidOrders)
+console.log('del',inDeliveryOrders)
   const displayedOrders =
     selectedTab === "Unpaid" ? unpaidOrders : inDeliveryOrders;
+
+  const isLoading =
+    selectedTab === "Unpaid" ? loadingUnpaid : loadingDelivery;
+
+  const error =
+    selectedTab === "Unpaid" ? unpaidError : deliveryError;
 
   const isButtonEnabled = !!currentOrder;
 
@@ -49,35 +66,65 @@ const PendingOrders = () => {
     ? getSimilarOrderProducts(currentOrder)
     : [];
 
-  const handleBack = () => navigation.goBack();
-
   const handleOrderClick = (order: Order) => setCurrentOrder(order);
+  const handleBack = () => navigation.goBack();
+  const handleButtonPress = () => setShowOrderModal(true);
 
-  const handleButtonPress = () => {
-    if (isButtonEnabled) setShowOrderModal(true);
+const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
+  console.log('id',item.id)
+  const transformedOrder = {
+    ...item,
+    name: item.product?.name,
+    price: parseFloat(item.unit_price),
+    image: item.product?.main_image_url
+      ? { uri: item.product.main_image_url }
+      : require("@/assets/images/logo.png"),
+    products: [item.product],
   };
 
-  const renderOrderItem = ({ item, index }: { item: Order; index: number }) => {
-    if (selectedTab === "Unpaid") {
-      return (
-        <OrderItem
-          order={item}
-          index={index}
-          checked={currentOrder?.id === item.id}
-          onpress={() => handleOrderClick(item)}
-        />
-      );
-    }
+  if (selectedTab === "Unpaid") {
     return (
-      <DeliveryItem
-        order={item}
+      <OrderItem
+        order={transformedOrder}
         index={index}
         checked={currentOrder?.id === item.id}
-        onpress={() => handleOrderClick(item)}
-        link={`/order/${item.id}`}
+        onpress={() => handleOrderClick(transformedOrder)}
+        userId={userId ?? ""}
+        outlet={activeOutlet ?? ""}
       />
     );
-  };
+  } else {
+    return (
+     <DeliveryOrderItem
+  order={transformedOrder}
+  index={index}
+  isSelected={currentOrder?.id === item.id}
+  onClick={() => handleOrderClick(transformedOrder)}
+  onSeeMorePress={() =>
+    router.push({
+      pathname: "/order/[id]",
+      params: { id: item.id },
+    })
+  }
+/>
+
+
+    );
+  }
+};
+
+
+  if (isLoading) {
+    return <Text style={styles.actionBtnText}>Loading orders...</Text>;
+  }
+
+  if (error) {
+    return (
+      <Text style={[styles.activeTabText, { color: "red" }]}>
+        Failed to fetch orders.
+      </Text>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -114,18 +161,18 @@ const PendingOrders = () => {
         ))}
       </View>
 
-      {/* Orders List */}
+      {/* Orders */}
       <FlatList
         data={displayedOrders}
         keyExtractor={(item) => item.id.toString()}
+        renderItem={renderOrderItem}
         contentContainerStyle={styles.orderList}
         ListEmptyComponent={() => (
           <Text style={styles.noOrdersText}>No orders in this category.</Text>
         )}
-        renderItem={renderOrderItem}
       />
 
-      {/* Action Button only on Unpaid tab */}
+      {/* Footer */}
       {selectedTab === "Unpaid" && (
         <View style={styles.selectedOrderFooter}>
           <Text style={styles.selectedOrderText}>
@@ -138,29 +185,24 @@ const PendingOrders = () => {
             disabled={!isButtonEnabled}
             onPress={handleButtonPress}
           >
-            <Feather
-              name="credit-card"
-              size={20}
-              color="#fff"
-              style={{ marginRight: 8 }}
-            />
+            <Feather name="credit-card" size={20} color="#fff" />
             <Text style={styles.actionBtnText}>Make Payment</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Similar products */}
+      {/* Similar Discounts */}
       {similarDiscountProducts.length > 0 && (
         <View style={styles.similarDiscountsContainer}>
           <SimilarProducts
             similar={similarDiscountProducts}
-            onProductPress={(id) => router.push(`/product/${id}`)}
+            onProductPress={(id) => navigation.navigate("product", { id })}
             title="Similar Discounts"
           />
         </View>
       )}
 
-      {/* Modal */}
+      {/* Order Modal */}
       <Modal
         visible={showOrderModal}
         animationType="slide"
@@ -169,14 +211,14 @@ const PendingOrders = () => {
       >
         <OrderModal
           visible={true}
-          product={currentOrder as any} // If OrderModal expects Product, adapt accordingly
+          product={currentOrder as any}
           onClose={() => setShowOrderModal(false)}
+          outlet={activeOutlet ?? ""}
         />
       </Modal>
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

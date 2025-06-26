@@ -16,6 +16,7 @@ export function HeroPage() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const [filterOpen, setFilterOpen] = useState(false);
+const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const toggleFilter = () => setFilterOpen(!filterOpen);
   const filterOptions = [
@@ -25,11 +26,19 @@ export function HeroPage() {
   'Categories',
   'Rating',
 ];
+const handleCategorySelect = (category: string) => {
+  setSelectedCategory(category);
+  console.log("Selected category:", category);
+};
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Search & Filter */}
-      <SearchBar onFilterToggle={toggleFilter} filterOptions={filterOptions} filterOpen={filterOpen} />
+      <SearchBar
+  onFilterToggle={toggleFilter}
+  filterOpen={filterOpen}
+  onCategorySelect={handleCategorySelect}
+/>
 
       {/* Hero Background with Centered Content */}
       <View style={styles.heroWrapper}>
