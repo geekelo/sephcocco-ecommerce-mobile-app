@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, useColorScheme } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  useColorScheme,
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { useLocalSearchParams } from 'expo-router';
+import { Layout } from '@/components/layout/Layout';
 import ProductInfo from '@/components/products/productInfo';
 import InfoSection from '@/components/order/infoSection';
-import { useLocalSearchParams } from 'expo-router';
-import { orders } from '@/components/order/ordersdata';
-import { Layout } from '@/components/layout/Layout';
 import { Colors } from '@/constants/Colors';
 import { getUser } from '@/lib/tokenStorage';
 import { useOutlet } from '@/context/outletContext';
@@ -15,126 +20,144 @@ import { useGetOrderById } from '@/mutation/useOrders';
 const OrderDetails = () => {
   const navigation = useNavigation();
   const colorScheme = useColorScheme();
-    const theme = Colors[colorScheme ?? "light"];
-  const route = useRoute();
+  const theme = Colors[colorScheme ?? 'light'];
+  
+  const { activeOutlet } = useOutlet();
+const { id } = useLocalSearchParams();
+const orderId = typeof id === 'string' ? id : undefined;
+console.log('orderId:', orderId);
 
-   const { orderId } = useLocalSearchParams();
   const [userId, setUserId] = useState<string | null>(null);
+console.log('orderid',orderId)
+  useEffect(() => {
+    getUser().then((user) => setUserId(user?.id ?? null));
+  }, []);
 
-useEffect(() => {
-  getUser().then(user => setUserId(user?.id ?? null));
-}, []);
-const { activeOutlet } = useOutlet();
-const { data: orderdata, isLoading, isError } = useGetOrderById(
-  activeOutlet ??  "",
-  String(orderId),
+  const {
+  data: order,
+  isLoading,
+  isError,
+} = useGetOrderById(
+  activeOutlet ?? '',
+  orderId ?? '',
   userId
 );
-console.log(orderdata)
 
-  const order = orders.find(o => o.id.toString() === orderId) || orders[0];
-  
-  const handleBack = () => {
-    navigation.goBack();
-  };
-  
+  console.log(order)
+
+  const handleBack = () => navigation.goBack();
+
   if (!activeOutlet || !orderId || !userId) {
-  return (
-    <Layout>
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Loading data...</Text>
-      </View>
-    </Layout>
-  );
-}
+    return (
+      <Layout>
+        <View style={styles.centered}>
+          <Text>Loading data...</Text>
+        </View>
+      </Layout>
+    );
+  }
 
-if (isLoading) {
-  return (
-    <Layout>
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Fetching order details...</Text>
-      </View>
-    </Layout>
-  );
-}
+  if (isLoading) {
+    return (
+      <Layout>
+        <View style={styles.centered}>
+          <Text>Fetching order details...</Text>
+        </View>
+      </Layout>
+    );
+  }
 
-if (isError || !order) {
-  return (
-    <Layout>
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Failed to load order.</Text>
-      </View>
-    </Layout>
-  );
-}
+  if (isError || !order) {
+    return (
+      <Layout>
+        <View style={styles.centered}>
+          <Text>Failed to load order.</Text>
+        </View>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
-    <View style={[styles.container, {backgroundColor:theme.background}]} >
-      {/* Navigation */}
-      <View style={styles.nav}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton} activeOpacity={0.7}>
-          <MaterialIcons name="arrow-back" size={20} color={theme.text} />
-          <Text style={[styles.backText, {color:theme.text}]}>Back</Text>
-        </TouchableOpacity>
-      </View>
-      
-      {/* Order Status Message */}
-      <View style={styles.statusMessage}>
-        <Text style={[styles.statusText, {color:theme.success}]}>
-          Your order will be completed 2-3 hours after arrival. During this period, you can raise a dispute if 
-          you did not receive your product or received the wrong product.
-        </Text>
-      </View>
-      
-      {/* Product Information */}
-      <ProductInfo
-        name={order.name}
-        image={order.image}
-        price={order.price}
-       
-        ratingCount={order.ratingCount}
-        status={order.status}
-        likes={order.likes}
-        isFavorite={order.isFavorite}
-      />
-      
-      {/* Product Description */}
-      <View style={styles.descriptionSection}>
-        <Text style={styles.sectionTitle}>Product Description</Text>
-        <Text style={styles.descriptionText}>
-          {order.longDescription || 
-           "Lorem ipsum dolor sit amet consectetur. Neque tincidunt urna rhoncus vitae sit. Sodales nec diam dignissim eu risus. Orci ac sed pellentesque venenatis nunc mi cursus viverra. Turpis laculis massa elementum eu. Ipsum imperdiet tincida arcu erat gravida."}
-        </Text>
-      </View>
-      
-      {/* Information Sections */}
-      <View style={styles.infoSectionsContainer}>
-        <InfoSection
-          title="Payment Information"
-          items={[
-            { label: "Payment Method:", value: "Door step Delivery" },
-            { label: "Payment Details:", value: "Lorem ipsum dolor sit amet consectetur. Rhoncus vel praesent duis et." }
-          ]}
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        {/* Header */}
+        <View style={styles.nav}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <MaterialIcons name="arrow-back" size={20} color={theme.text} />
+            <Text style={[styles.backText, { color: theme.text }]}>Back</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Order Status Message */}
+        <View style={styles.statusMessage}>
+          <Text style={[styles.statusText, { color: theme.success }]}>
+            Your order will be completed 2-3 hours after arrival. During this period,
+            you can raise a dispute if you did not receive your product or received the wrong product.
+          </Text>
+        </View>
+
+        {/* Product Info */}
+        <ProductInfo
+          name={order.product?.name ?? 'Unnamed Product'}
+          image={
+            order.product?.main_image_url
+              ? { uri: order.product.main_image_url }
+              : require('@/assets/images/logo.png')
+          }
+          price={parseFloat(order.unit_price)}
+          ratingCount={order.ratingCount ?? 0}
+          status={order.status}
+          likes={order.likes ?? 0}
+          isFavorite={order.isFavorite ?? false}
         />
-        
-        <InfoSection
-          title="Delivery Information"
-          items={[
-            { label: "Delivery Method:", value: "Door step Delivery" },
-            { label: "Shipping Address:", value: "Lorem ipsum dolor sit amet consectetur. Rhoncus vel praesent duis et." },
-            { label: "Shipping Details:", value: "Lorem ipsum dolor sit amet consectetur. Rhoncus vel praesent duis et." }
-          ]}
-        />
+
+        {/* Description */}
+        <View style={styles.descriptionSection}>
+          <Text style={styles.sectionTitle}>Product Description</Text>
+          <Text style={styles.descriptionText}>
+            {order.product?.description ??
+              'No description available for this product.'}
+          </Text>
+        </View>
+
+        {/* Info Sections */}
+        <View style={styles.infoSectionsContainer}>
+          <InfoSection
+            title="Payment Information"
+            items={[
+              { label: 'Payment Method:', value: 'Door step Delivery' },
+              {
+                label: 'Payment Details:',
+                value: 'Paid at point of delivery',
+              },
+            ]}
+          />
+
+          <InfoSection
+            title="Delivery Information"
+            items={[
+              { label: 'Delivery Method:', value: 'Door step Delivery' },
+              {
+                label: 'Shipping Address:',
+                value: order.delivery_address ?? 'Not provided',
+              },
+              {
+                label: 'Shipping Details:',
+                value: 'Delivery estimated within 24 hours',
+              },
+            ]}
+          />
+        </View>
+
+        {/* Help Button */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={styles.helpButton} activeOpacity={0.8}>
+            <Text style={[styles.helpButtonText, { color: theme.text }]}>
+              Get Help
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-      
-      {/* Action Buttons */}
-      <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.helpButton} activeOpacity={0.8}>
-          <Text style={[styles.helpButtonText, {color:theme.text}]}>Get Help</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
     </Layout>
   );
 };
@@ -158,7 +181,6 @@ const styles = StyleSheet.create({
   backText: {
     marginLeft: 8,
     fontSize: 16,
-   
     fontWeight: '500',
   },
   statusMessage: {
@@ -172,7 +194,6 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 14,
     lineHeight: 21,
-   
   },
   descriptionSection: {
     marginTop: 24,
@@ -191,9 +212,8 @@ const styles = StyleSheet.create({
   },
   infoSectionsContainer: {
     flexDirection: 'column',
-    justifyContent: 'space-between',
+    gap: 16,
     marginBottom: 24,
-    gap: 16, 
   },
   actionButtons: {
     marginTop: 32,
@@ -205,8 +225,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   helpButtonText: {
-  
     fontWeight: '500',
     fontSize: 16,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

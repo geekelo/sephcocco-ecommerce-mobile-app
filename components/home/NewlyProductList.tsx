@@ -21,10 +21,12 @@ type ProductListProps = {
   isLoggedIn: boolean;
   onLoginPrompt?: () => void;
   userId: string | null; // ✅ Add this
+  category?: string;
+
 };
 
 
-export default function ProductList({ outlet, isLoggedIn, onLoginPrompt, userId }: ProductListProps) {
+export default function ProductList({ outlet, isLoggedIn, onLoginPrompt, userId , category}: ProductListProps) {
  const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const { width } = useWindowDimensions();
@@ -33,7 +35,7 @@ export default function ProductList({ outlet, isLoggedIn, onLoginPrompt, userId 
 
   const numColumns = width > 768 ? 3 : width > 300 ? 2 : 1;
   const cardWidth = (width - 60 - (numColumns - 1) * 16) / numColumns;
-
+console.log(data)
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.headerRow}>
@@ -66,9 +68,10 @@ export default function ProductList({ outlet, isLoggedIn, onLoginPrompt, userId 
   title={item.name}
   favorites={item.likes}
   amount={`₦${item.price}`}
-  stock={item.stock}
+  stock={item.amount_in_stock}
   outlet={item.outlet}
   isLoggedIn={isLoggedIn}
+out_of_stock_status={item.out_of_stock_status}
   likedByUser={item.liked_by_user} // ✅ assuming API returns this field
   onLoginPrompt={onLoginPrompt}
   onToggleLike={() => {

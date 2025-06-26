@@ -1,93 +1,98 @@
-import { router, useLocalSearchParams, useNavigation } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
+  View,
   Image,
   ScrollView,
-  StyleSheet,
-  useColorScheme,
-  View,
   TouchableOpacity,
   Platform,
-  Text,
   ActivityIndicator,
+  useColorScheme,
+  Alert,
+  StyleSheet,
+  useWindowDimensions,
+  Dimensions,
 } from "react-native";
-import { ThemedText } from "@/components/ThemedText";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useNavigation, router } from "expo-router";
 import { ThemedView } from "@/components/ThemedView";
+import { ThemedText } from "@/components/ThemedText";
 import { Colors } from "@/constants/Colors";
-import { Layout } from "@/components/layout/Layout";
-import { SearchBar } from "@/components/common/SearchBar";
-import { useEffect, useState } from "react";
-import CustomButton from "@/components/ui/CustomButton";
-import { CustomOutlineButton } from "@/components/ui/CustomOutlineButton";
-import {  Ionicons } from "@expo/vector-icons";
-import { StarRating } from "@/components/common/ratingCard";
-import { Dimensions } from "react-native";
 import { useOutlet } from "@/context/outletContext";
 import { getUser } from "@/lib/tokenStorage";
+import { Layout } from "@/components/layout/Layout";
+import { SearchBar } from "@/components/common/SearchBar";
+import { StarRating } from "@/components/common/ratingCard";
+import CustomButton from "@/components/ui/CustomButton";
+import { CustomOutlineButton } from "@/components/ui/CustomOutlineButton";
 import { useProductById } from "@/mutation/useProducts";
+import { useCreateOrder } from "@/mutation/useOrders";
+import OrderModal from "@/components/order/orderModal";
 
-const { width } = Dimensions.get("window");
-type SimilarProduct = {
-  id: number;
-  image: any;
-  title: string;
-  favorites: number;
-  amount: string;
-  stock: number;
-};
 
-type Product =
-  | {
-      id: number;
-      image: any;
-      subImages: any[];
-      title: string;
-      favorites: number;
-      amount: string;
-      stock: number;
-      description: string;
-      discount: number;
-      similar: SimilarProduct[];
-    }
-  | undefined;
+const width = Dimensions.get("window").width;
 export default function ProductDetail() {
   const { id } = useLocalSearchParams(); // id is string | string[] | undefined
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? "light"];
   const navigation = useNavigation();
   const { activeOutlet } = useOutlet();
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+const [orderModalVisible, setOrderModalVisible] = useState(false);
 
   const productId = typeof id === "string" ? id : null;
+  const [userId, setUserId] = useState<string | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
     getUser().then((user) => setUserId(user?.id ?? null));
   }, []);
 
-  // 🚫 Don't call hook if required data is missing
   const {
     data: product,
     isLoading,
     isError,
   } = useProductById(activeOutlet ?? "", productId ?? "");
 
+  const createOrderMutation = useCreateOrder(activeOutlet ?? "");
+
+  const handlePlaceOrder = () => {
+    if (!userId) {
+      Alert.alert("Login Required", "Please login to place an order.");
+      return;
+    }
+
+    if (!product || !activeOutlet) {
+      Alert.alert("Error", "Missing product or outlet info.");
+      return;
+    }
+
+    const payload = {
+      product_id: product.id,
+      quantity: 1,
+      outlet: activeOutlet,
+      address: "Test Address",
+      phone_number: "08012345678",
+      additional_notes: "Buying directly from product page",
+    };
+    console.log(payload)
+
+    createOrderMutation.mutate(payload, {
+      onSuccess: () => {
+        Alert.alert("Success", "Order placed successfully!");
+      },
+      onError: () => {
+        Alert.alert("Error", "Something went wrong. Please try again.");
+      },
+    });
+  }
+  const toggleFilter = () => setFilterOpen(!filterOpen);
+
   if (!activeOutlet || !productId) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Text>Loading outlet or product ID...</Text>
+        <ThemedText>Loading outlet or product ID...</ThemedText>
       </View>
     );
   }
-
-  const handleLike = () => {
-    if (!userId) {
-      return alert("Please log in to like products.");
-    }
-
-    // TODO: Trigger like mutation here
-  };
-
-  const toggleFilter = () => setFilterOpen(!filterOpen);
 
   if (isLoading) {
     return (
@@ -115,7 +120,6 @@ export default function ProductDetail() {
     "Rating",
   ];
 
-  
   return (
     <Layout>
       <View style={{ flex: 1 }}>
@@ -144,95 +148,64 @@ export default function ProductDetail() {
         >
           <Ionicons name="close" size={24} color="#000" />
         </TouchableOpacity>
+
         <ScrollView contentContainerStyle={styles.container}>
-          {/* Main Image */}
-        <Image source={{ uri: product?.main_image_url }} style={styles.images} />
+          <Image source={{ uri: product.main_image_url }} style={styles.images} />
 
-
-          {/* Sub Images */}
-          <View
-            style={[styles.subImageContainer, { borderColor: theme.orange }]}
-          >
-           {Array.isArray(product?.other_image_urls) &&
-  product.other_image_urls.map((img: any, idx: number) => (
-    <Image key={idx} source={{ uri: img }} style={styles.subImage} />
-))}
-
-
+          <View style={[styles.subImageContainer, { borderColor: theme.orange }]}>
+            {product.other_image_urls?.map((img: string, idx: number) => (
+              <Image key={idx} source={{ uri: img }} style={styles.subImage} />
+            ))}
           </View>
 
           <ThemedText fontFamily="Raleway-Regular" style={styles.title}>
             {product.name}
           </ThemedText>
+
           <ThemedText fontFamily="Raleway-Regular" style={styles.stock}>
             In stock: {product.amount_in_stock} items
           </ThemedText>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              marginBottom: 10,
-            }}
-          >
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
             <StarRating rating={Math.min(5, product.favorites / 10)} />
-            <ThemedText>({product?.likes} )</ThemedText>
+            <ThemedText>({product.likes})</ThemedText>
           </View>
 
           <ThemedText style={styles.amount}>₦ {product.price}</ThemedText>
 
           <ThemedView>
-            <ThemedText
-              fontFamily="Raleway-Regular"
-              style={styles.descriptionheader}
-            >
+            <ThemedText style={styles.descriptionheader} fontFamily="Raleway-Regular">
               Product Description
             </ThemedText>
-            <ThemedText fontFamily="Raleway-Regular" style={styles.description}>
+            <ThemedText style={styles.description} fontFamily="Raleway-Regular">
               {product.long_description}
             </ThemedText>
           </ThemedView>
+
           <ThemedView style={styles.row}>
-            <Ionicons
-              name="information-circle-outline"
-              size={20}
-              color={theme.gray}
-            />
-            <ThemedText style={{ color: theme.gray }}>Make Enquires</ThemedText>
+            <Ionicons name="information-circle-outline" size={20} color={theme.gray} />
+            <ThemedText style={{ color: theme.gray }}>Make Enquiries</ThemedText>
           </ThemedView>
+
           <ThemedView style={styles.btns}>
+           
+
+<CustomButton
+  text="Add to pending orders"
+  icon={<Feather name="shopping-cart" size={18} color="#333" />}
+  onPress={handlePlaceOrder}
+  style={{ paddingVertical: 24, width: '45%', backgroundColor: theme.pink }}
+  textStyle={{ color: '#333' }}
+/>
+
+
             <CustomButton
-              onPress={() => {
-                router.push("/Billing");
-              }}
-              text="Add to pending orders"
-              style={{
-                backgroundColor: theme.pink,
-                paddingVertical: 24,
-                width: "45%",
-              }}
-              textStyle={{ color: "#333" }}
-            />
-            <CustomButton
-              onPress={() => {
-                router.push("/Billing");
-              }}
-              text="Buy Now"
-              style={{ paddingVertical: 24, width: "45%" }}
-            />
+  onPress={() => setOrderModalVisible(true)}
+  text="Buy Now"
+  style={{ paddingVertical: 24, width: "45%" }}
+/>
+
           </ThemedView>
-          {/* Similar Products */}
-          {/* {product?.similar?.length > 0 && (
-            <SimilarProducts
-              similar={product.similar}
-              onProductPress={(id) =>
-                router.push({
-                  pathname: "/product/[id]",
-                  params: { id: String(id) },
-                })
-              }
-            />
-          )} */}
 
           <CustomOutlineButton
             title="Have any Questions? Send us a message"
@@ -242,9 +215,17 @@ export default function ProductDetail() {
           />
         </ScrollView>
       </View>
+      <OrderModal
+  product={product}
+  visible={orderModalVisible}
+  onClose={() => setOrderModalVisible(false)}
+   outlet={activeOutlet}
+/>
+
     </Layout>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

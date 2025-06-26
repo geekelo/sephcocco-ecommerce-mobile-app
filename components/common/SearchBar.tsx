@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   TextInput,
@@ -7,39 +7,55 @@ import {
   StyleSheet,
   useColorScheme,
   Dimensions,
+  ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { Feather, Entypo } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
 import { useOutlet } from '@/context/outletContext';
 import { useProductCategories } from '@/mutation/useCategory';
 
+const screenWidth = Dimensions.get('window').width;
+
 interface SearchBarProps {
   onFilterToggle?: () => void;
-  onFilterSelect?: (option: string) => void; // Add this
-  filterOpen: boolean;
+  onCategorySelect?: (category: string) => void;
   onSearchChange?: (text: string) => void;
-  filterOptions: string[];
+  onFilterSelect?: (filter: string) => void;
+  filterOpen: boolean;
 }
 
+const primaryFilters = [
+  'Price: Low to High',
+  'Price: High to Low',
+  'Newest First',
+  'Rating',
+];
 
 export function SearchBar({
   onFilterToggle,
   filterOpen,
   onSearchChange,
   onFilterSelect,
-  filterOptions,
+  onCategorySelect,
 }: SearchBarProps) {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const themedStyles = getThemedStyles(theme);
-  const { activeOutlet } = useOutlet(); // ✅ dynamic activeOutlet
+  const { activeOutlet } = useOutlet();
+  const { data: categories, isLoading, error } = useProductCategories(activeOutlet ?? '');
 
-  const { data: categories, isLoading, error } = useProductCategories(activeOutlet ?? "");
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
+  const handleFilterClick = (filter: string) => {
+    onFilterSelect?.(filter);
+    onFilterToggle?.();
+  };
 
-  console.log('Fetched Categories:', categories);
-  console.log('Loading:', isLoading);
-  console.log('Error:', error);
+  const handleCategoryClick = (category: string) => {
+    onCategorySelect?.(category);
+    onFilterToggle?.();
+  };
 
   return (
     <>
@@ -58,25 +74,47 @@ export function SearchBar({
         </TouchableOpacity>
       </View>
 
-      {/* Dropdown menu */}
-     {filterOpen && (
-  <View style={themedStyles.dropdown}>
-    {filterOptions.map((option, idx) => (
-      <TouchableOpacity
-        key={idx}
-        onPress={() => onFilterSelect?.(option)}
-      >
-        <Text style={themedStyles.dropdownItem}>{option}</Text>
-      </TouchableOpacity>
-    ))}
-  </View>
-)}
+      {filterOpen && (
+        <View style={themedStyles.dropdown}>
+          {/* Regular filters */}
+          {primaryFilters.map((filter, idx) => (
+            <TouchableOpacity key={idx} onPress={() => handleFilterClick(filter)}>
+              <Text style={themedStyles.dropdownItem}>{filter}</Text>
+            </TouchableOpacity>
+          ))}
 
+          {/* Category Toggle */}
+          <TouchableOpacity
+            onPress={() => setIsCategoryOpen(!isCategoryOpen)}
+            style={styles.categoryToggle}
+          >
+            <Text style={themedStyles.dropdownItem}>Category</Text>
+            <Entypo
+              name={isCategoryOpen ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={theme.text}
+            />
+          </TouchableOpacity>
+
+          {/* Category List */}
+          {isCategoryOpen && (
+            <View style={{ maxHeight: 200 }}>
+              <ScrollView>
+                {isLoading && <ActivityIndicator size="small" color={theme.orange} />}
+                {error && <Text style={{ color: 'red' }}>Failed to load categories</Text>}
+                {categories?.map((cat: { name: string }, idx: number) => (
+                  <TouchableOpacity key={idx} onPress={() => handleCategoryClick(cat.name)}>
+                    <Text style={[themedStyles.dropdownItem, { paddingLeft: 12 }]}>• {cat.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      )}
     </>
   );
 }
-
-const screenWidth = Dimensions.get('window').width;
 
 const styles = StyleSheet.create({
   searchIcon: {
@@ -85,6 +123,12 @@ const styles = StyleSheet.create({
   filterText: {
     fontSize: 10,
     marginRight: 4,
+  },
+  categoryToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
   },
 });
 
@@ -96,15 +140,15 @@ const getThemedStyles = (theme: any) =>
       borderRadius: 5,
       paddingHorizontal: 12,
       height: 50,
-      shadowColor: '#000',
-      shadowOpacity: 0.1,
-      shadowRadius: 6,
-      elevation: 1,
-      marginHorizontal: screenWidth * 0.05, // 5% of screen width
+      marginHorizontal: screenWidth * 0.05,
       marginTop: 20,
       borderWidth: 0.3,
       backgroundColor: theme.background,
       borderColor: theme.inputBorder,
+      shadowColor: '#000',
+      shadowOpacity: 0.1,
+      shadowRadius: 6,
+      elevation: 1,
     },
     searchInput: {
       flex: 1,
@@ -122,28 +166,26 @@ const getThemedStyles = (theme: any) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 8,
-      width: screenWidth * 0.3, // 30% of screen width
+      width: screenWidth * 0.3,
     },
-   dropdown: {
-  position: 'absolute',
-  top: 80,
-  right: 0,
-  borderRadius: 8,
-  borderWidth: 1,
-  paddingVertical: 8,
-  paddingHorizontal: 12,
-  width: screenWidth * 0.6,
-  backgroundColor: '#fff',
-  borderColor: '#ccc',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.2,
-  shadowRadius: 4,
-  elevation: 0,  // Android shadow
-  zIndex: 9999,   // iOS stacking
-},
-
-
+    dropdown: {
+      position: 'absolute',
+      top: 80,
+      right: 0,
+      borderRadius: 8,
+      borderWidth: 1,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      width: screenWidth * 0.6,
+      backgroundColor: '#fff',
+      borderColor: '#ccc',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 2,
+      zIndex: 9999,
+    },
     dropdownItem: {
       paddingVertical: 6,
       fontSize: 16,

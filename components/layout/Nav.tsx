@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   TouchableOpacity,
@@ -14,6 +14,7 @@ import { Colors } from "@/constants/Colors";
 import { Link, useRouter } from "expo-router"; // added useRouter for navigation
 import { useOutlet } from "@/context/outletContext";
 import { Routes } from "@/routes";
+import { getUser } from "@/lib/tokenStorage";
 
 const windowHeight = Dimensions.get("window").height;
 const windowWidth = Dimensions.get("window").width;
@@ -27,6 +28,15 @@ export function NavBar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const { activeOutlet, setActiveOutlet } = useOutlet();
+const [userId, setUserId] = useState<string | null>(null);
+
+useEffect(() => {
+  const fetchUser = async () => {
+    const user = await getUser();
+    setUserId(user?.id ?? null);
+  };
+  fetchUser();
+}, []);
 
   const router = useRouter();
 
@@ -65,15 +75,27 @@ export function NavBar() {
       </View>
 
       {/* Login Link */}
-      <Link
-        href={Routes.auth.login}
-        style={[styles.loginLink, { borderBottomColor: theme.orange }]}
-        asChild
-      >
-        <ThemedText type="default" style={{ color: theme.text }}>
-          Login
-        </ThemedText>
-      </Link>
+      {userId ? (
+  <TouchableOpacity
+    style={styles.iconItem}
+    accessibilityLabel="User profile"
+    accessibilityRole="button"
+    onPress={() => router.push('/')} // or any other screen
+  >
+    <Feather name="user" size={24} color={theme.text} />
+  </TouchableOpacity>
+) : (
+  <Link
+    href={Routes.auth.login}
+    style={[styles.loginLink, { borderBottomColor: theme.orange }]}
+    asChild
+  >
+    <ThemedText type="default" style={{ color: theme.text }}>
+      Login
+    </ThemedText>
+  </Link>
+)}
+
 
       {/* Hamburger Icon */}
       <TouchableOpacity
@@ -123,17 +145,13 @@ export function NavBar() {
             <ThemedText type="default">Pending</ThemedText>
           </Link>
 
-          <TouchableOpacity
-            onPress={() => {}}
-            style={[styles.sidebarText, { borderBottomColor: theme.border }]}
-            accessibilityRole="button"
-            accessible
-            accessibilityLabel="Completed Orders"
+           <Link
+            href="/completed"
+            style={[styles.sidebarText, { color: theme.text, borderBottomColor: theme.border }]}
+            asChild
           >
-            <ThemedText type="default" style={{ color: theme.text }}>
-              Completed
-            </ThemedText>
-          </TouchableOpacity>
+            <ThemedText type="default">Completed</ThemedText>
+          </Link>
 
           <Link
             href="/paymentHistory"
@@ -203,13 +221,28 @@ export function NavBar() {
             >
               <Feather name="log-out" size={30} color={theme.text} />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.iconItem}
-              accessibilityRole="button"
-              accessibilityLabel="User profile"
-            >
-              <Feather name="user" size={30} color={theme.text} />
-            </TouchableOpacity>
+            {userId ? (
+  <TouchableOpacity
+    style={styles.iconItem}
+    accessibilityLabel="User profile"
+    accessibilityRole="button"
+    onPress={() => router.push('/')} // or any other screen
+  >
+    <Feather name="user" size={24} color={theme.text} />
+  </TouchableOpacity>
+) : (
+  <Link
+    href={Routes.auth.login}
+    style={[styles.loginLink, { borderBottomColor: theme.orange }]}
+    asChild
+  >
+    <ThemedText type="default" style={{ color: theme.text }}>
+      Login
+    </ThemedText>
+  </Link>
+)}
+
+           
           </View>
         </View>
       )}
