@@ -14,7 +14,7 @@ import { router } from "expo-router";
 
 type PaymentMethodProps = {
   address: string;
-  product: { price: number };
+  product: { price: any };
   quantity: number;
 };
 

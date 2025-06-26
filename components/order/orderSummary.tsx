@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
 import { Entypo } from '@expo/vector-icons';
 import { Product } from '../types/types';
-
+import { useCreateOrder } from '@/mutation/useOrders';
 
 type OrderSummaryProps = {
   product: Product;
@@ -10,8 +18,9 @@ type OrderSummaryProps = {
   quantity: number;
   setQuantity: (quantity: number) => void;
   address: string;
- 
+  outlet: string; // ✅ Added outlet prop
 };
+
 
 export default function OrderSummary({
   product,
@@ -19,11 +28,45 @@ export default function OrderSummary({
   quantity,
   setQuantity,
   address,
- 
+  outlet
 }: OrderSummaryProps) {
+  const { mutate: createOrder, isPending } = useCreateOrder(outlet);
+
   const [notes, setNotes] = useState<string>('');
   const [phoneNumbers, setPhoneNumbers] = useState<string>('');
+const incrementQuantity = () => setQuantity(quantity + 1);
 
+const decrementQuantity = () => {
+  if (quantity > 1) setQuantity(quantity - 1);
+};
+
+
+const handleCreateOrder = () => {
+  if (!address || !phoneNumbers) {
+    alert('Please fill out all required fields');
+    return;
+  }
+
+  createOrder(
+    {
+      product_id: product.id,
+      quantity,
+      outlet,
+      address,
+      phone_number: phoneNumbers,
+      additional_notes: notes || undefined,
+    },
+    {
+      onSuccess: () => {
+        alert("✅ Order created successfully!");
+      },
+      onError: (error: any) => {
+        console.error("Order creation failed:", error);
+        alert("❌ Failed to create order. Please try again.");
+      },
+    }
+  );
+};
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -31,19 +74,42 @@ export default function OrderSummary({
         <Text style={styles.sectionTitle}>Order Summary</Text>
 
         <View style={styles.orderItem}>
-          <Image source={ product.image } style={styles.orderItemImage} />
+          <Image
+            source={{ uri: product?.main_image_url ?? '' }}
+            style={styles.orderItemImage}
+          />
 
           <View style={styles.orderItemDetails}>
-            <Text style={styles.productName}>{product.title}</Text>
+            <Text style={styles.productName}>{product?.name}</Text>
+            <Text style={styles.itemPrice}>₦ {product?.price}</Text>
 
-            <View>
-              <Text style={styles.itemPrice}>${product.price.toFixed(2)}</Text>
-              <Text style={styles.quantityLabel}>
-                 Quantity: <Text style={styles.quantityValue}>{quantity}</Text>
-              </Text>
+            <View style={styles.quantityRow}>
+              <View style={{display:'flex', flexDirection:'row', gap:4}}>
+              <Text style={styles.quantityLabel}>Quantity:</Text>
+              <Text style={styles.quantityValue}>{quantity}</Text>
+              </View>
+              <View style={styles.quantitySelector}>
+                <TouchableOpacity
+                  onPress={decrementQuantity}
+                  style={[
+                    styles.quantityBtn,
+                    quantity === 1 && styles.disabledBtn,
+                  ]}
+                  disabled={quantity === 1}
+                >
+                  <Entypo name="minus" size={18} color="#fff" />
+                </TouchableOpacity>
+
+                
+
+                <TouchableOpacity
+                  onPress={incrementQuantity}
+                  style={styles.quantityBtn}
+                >
+                  <Entypo name="plus" size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
             </View>
-
-           
           </View>
         </View>
       </View>
@@ -73,7 +139,9 @@ export default function OrderSummary({
             placeholder="Enter phone numbers separated by commas"
             style={styles.textArea}
           />
-          <Text style={styles.phoneNote}>You may receive a call to discuss delivery fees if needed.</Text>
+          <Text style={styles.phoneNote}>
+            You may receive a call to discuss delivery fees if needed.
+          </Text>
         </View>
 
         <View style={styles.formGroup}>
@@ -89,12 +157,20 @@ export default function OrderSummary({
         </View>
       </View>
 
-      <TouchableOpacity style={styles.nextButtonMobile}>
-        <Text style={styles.nextButtonText}>Continue to Payment</Text>
-      </TouchableOpacity>
+    <TouchableOpacity
+  style={[styles.nextButtonMobile, isPending && { opacity: 0.6 }]}
+  onPress={handleCreateOrder}
+  disabled={isPending}
+>
+  <Text style={styles.nextButtonText}>
+    {isPending ? 'Placing Order...' : 'Continue to Payment'}
+  </Text>
+</TouchableOpacity>
+
     </ScrollView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -110,8 +186,8 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 5,
-    elevation: 3,
+    shadowRadius: 3,
+    elevation: 1,
   },
   sectionTitle: {
     fontSize: 20,
@@ -146,7 +222,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     color: '#2d3748',
-    marginBottom: 8,
+    marginVertical: 8,
   },
   itemPriceRow: {
     flexDirection: 'row',
@@ -163,11 +239,12 @@ const styles = StyleSheet.create({
   quantityLabel: {
     fontWeight: '500',
     color: '#4a5568',
-    paddingVertical:12
+    paddingVertical:4
   },
   quantityValue: {
     fontWeight: '700',
     color: '#2d3748',
+     paddingVertical:4
   },
   quantitySelector: {
     flexDirection: 'row',
@@ -209,7 +286,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   nextButtonMobile: {
-    backgroundColor: '#3182ce',
+    backgroundColor: '#333',
     borderRadius: 8,
     paddingVertical: 16,
     alignItems: 'center',
@@ -225,4 +302,34 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 18,
   },
+  quantityControl: {
+  marginTop: 12,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+},
+quantityRow: {
+  marginTop: 12,
+  flexDirection: 'column',
+
+ gap:6
+},
+btnSelector: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 12,
+},
+quBtn: {
+  backgroundColor: '#2d3748',
+  width: 36,
+  height: 36,
+  borderRadius: 6,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+quadisabledBtn: {
+  backgroundColor: '#a0aec0',
+},
+
+  
 });

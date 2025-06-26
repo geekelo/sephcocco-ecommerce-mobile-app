@@ -4,6 +4,7 @@ import {
   Text,
   TouchableOpacity,
   useColorScheme,
+  View,
   ViewStyle,
   TextStyle,
   StyleProp,
@@ -15,10 +16,11 @@ interface Props {
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
-  disabled?: boolean; // ✅ New disabled prop
+  disabled?: boolean;
+  icon?: React.ReactNode; // ✅ Add icon prop
 }
 
-const CustomButton: React.FC<Props> = ({ text, onPress, style, textStyle, disabled }) => {
+const CustomButton: React.FC<Props> = ({ text, onPress, style, textStyle, disabled, icon }) => {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
 
@@ -33,9 +35,12 @@ const CustomButton: React.FC<Props> = ({ text, onPress, style, textStyle, disabl
       onPress={onPress}
       disabled={disabled}
     >
-      <Text style={[styles.buttonText, disabled && styles.disabledText, textStyle]}>
-        {text}
-      </Text>
+      <View style={styles.content}>
+        {icon && <View style={styles.icon}>{icon}</View>}
+        <Text style={[styles.buttonText, disabled && styles.disabledText, textStyle]}>
+          {text}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 };
@@ -45,6 +50,15 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 6.4,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  icon: {
+    marginRight: 8,
   },
   buttonText: {
     fontWeight: 'bold',

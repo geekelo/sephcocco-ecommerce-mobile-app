@@ -1,5 +1,5 @@
-import { Colors } from '@/constants/Colors';
-import React, { useEffect, useState } from 'react';
+import { Colors } from "@/constants/Colors";
+import React, { useEffect, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -10,20 +10,21 @@ import {
   ActivityIndicator,
   View,
   Platform,
-} from 'react-native';
-import { Card } from '../common/ProductCard';
-import { SearchBar } from '../common/SearchBar';
-import { ThemedView } from '../ThemedView';
-import { CustomOutlineButton } from '../ui/CustomOutlineButton';
-import { router } from 'expo-router';
-import { useOutlet } from '@/context/outletContext'; // ✅ add this
-import { getUser } from '@/lib/tokenStorage';
-import { useProducts } from '@/mutation/useProducts';
-import { useProductCategories } from '@/mutation/useCategory';
+} from "react-native";
+import { Card } from "../common/ProductCard";
+import { SearchBar } from "../common/SearchBar";
+import { ThemedView } from "../ThemedView";
+import { CustomOutlineButton } from "../ui/CustomOutlineButton";
+import { router } from "expo-router";
+import { useOutlet } from "@/context/outletContext"; 
+import { getUser } from "@/lib/tokenStorage";
+import { useProducts } from "@/mutation/useProducts";
+import { useProductCategories } from "@/mutation/useCategory";
+import { useCreateOrder } from "@/mutation/useOrders";
 
 export default function Products() {
   const colorScheme = useColorScheme();
-  const theme = Colors[colorScheme ?? 'light'];
+  const theme = Colors[colorScheme ?? "light"];
   const { width } = useWindowDimensions();
   const { activeOutlet } = useOutlet();
 
@@ -32,6 +33,7 @@ export default function Products() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const createOrderMutation = useCreateOrder(activeOutlet ?? "");
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -42,7 +44,11 @@ export default function Products() {
     fetchUser();
   }, []);
 
-  const { data: products, isLoading, error } = useProducts(activeOutlet ?? "", userId);
+  const {
+    data: products,
+    isLoading,
+    error,
+  } = useProducts(activeOutlet ?? "", userId);
 
   const {
     data: categories,
@@ -54,18 +60,10 @@ export default function Products() {
 
   const handleFilterSelect = (option: string) => {
     setSelectedFilter(option);
-    if (option === 'Categories') {
+    if (option === "Categories") {
       setFilterOpen(false);
     }
   };
-
-  const filterOptions = [
-    'Price: Low to High',
-    'Price: High to Low',
-    'Newest First',
-    'Categories',
-    'Rating',
-  ];
 
   const numColumns = width > 768 ? 3 : width > 480 ? 2 : 1;
   const cardWidth = (width - 60 - (numColumns - 1) * 16) / numColumns;
@@ -89,37 +87,49 @@ export default function Products() {
   if (error || categoriesError) {
     return (
       <View style={styles.center}>
-        <Text style={{ color: 'red' }}>Failed to load data.</Text>
+        <Text style={{ color: "red" }}>Failed to load data.</Text>
       </View>
     );
   }
 
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <SearchBar
-        filterOptions={filterOptions}
-        onFilterToggle={toggleFilter}
-        filterOpen={filterOpen}
-        onFilterSelect={handleFilterSelect}
-      />
+     <SearchBar
+  onFilterToggle={toggleFilter}
+  filterOpen={filterOpen}
+  onFilterSelect={handleFilterSelect}
+  onCategorySelect={setSelectedCategory}
+  onSearchChange={(text) => {
+    // Optional: live search filtering logic
+    console.log("Search text:", text);
+  }}
+/>
 
-      {selectedFilter === 'Categories' && (
+
+      {selectedFilter === "Categories" && (
         <View style={styles.categoryDropdown}>
-          {isCategoriesLoading && <ActivityIndicator size="small" color={theme.tint} />}
-          {categoriesError && <Text style={{ color: 'red' }}>Failed to load categories</Text>}
+          {isCategoriesLoading && (
+            <ActivityIndicator size="small" color={theme.tint} />
+          )}
+          {categoriesError && (
+            <Text style={{ color: "red" }}>Failed to load categories</Text>
+          )}
           {categories?.map((cat: any) => (
             <TouchableOpacity
               key={cat.id}
               style={[
                 styles.categoryItem,
-                selectedCategory === cat.name && { backgroundColor: theme.tint },
+                selectedCategory === cat.name && {
+                  backgroundColor: theme.tint,
+                },
               ]}
               onPress={() => setSelectedCategory(cat.name)}
             >
               <Text
                 style={{
-                  color: selectedCategory === cat.name ? '#fff' : theme.text,
-                  fontWeight: selectedCategory === cat.name ? 'bold' : 'normal',
+                  color: selectedCategory === cat.name ? "#fff" : theme.text,
+                  fontWeight: selectedCategory === cat.name ? "bold" : "normal",
                 }}
               >
                 {cat.name}
@@ -129,48 +139,56 @@ export default function Products() {
         </View>
       )}
 
-      {isLoading && <ActivityIndicator size="large" color={theme.tint} style={{ marginTop: 60 }} />}
+      {isLoading && (
+        <ActivityIndicator
+          size="large"
+          color={theme.tint}
+          style={{ marginTop: 60 }}
+        />
+      )}
       {error && (
-        <Text style={{ textAlign: 'center', color: 'red', marginTop: 60 }}>
+        <Text style={{ textAlign: "center", color: "red", marginTop: 60 }}>
           Failed to load products.
         </Text>
       )}
 
-     {!isLoading && isUserLoaded && products && (
-  <ThemedView style={styles.gridContainer}>
-    {products.map((item: any) => (
-      <ThemedView key={item.id} style={[styles.cardWrapper, { width: cardWidth }]}>
-        <Card
-          image={{ uri: item.image_url }}
-          title={item.title}
-          favorites={item.favorites}
-  likedByUser={item.liked_by_user} // ← from API
-  isLoggedIn={!!userId}
-  onLoginPrompt={() => alert('Login to like items')}
-  onToggleLike={() => {
-    // optional mutation logic here
-  }}
-
-         
-          amount={`₦${item.price}`}
-          stock={item.stock}
-          onPress={() =>
-            router.push({ pathname: '/product/[id]', params: { id: String(item.id) } })
-          }
-          outlet={activeOutlet}
-        
-        
-        />
-      </ThemedView>
-    ))}
-  </ThemedView>
-)}
-
+      {!isLoading && isUserLoaded && products && (
+        <ThemedView style={styles.gridContainer}>
+          {products.map((item: any) => (
+            <ThemedView
+              key={item.id}
+              style={[styles.cardWrapper, { width: cardWidth }]}
+            >
+              <Card
+                image={{ uri: item.image_url }}
+                title={item.title}
+                favorites={item.likes}
+                out_of_stock_status={item.out_of_stock_status}
+                likedByUser={item.liked_by_user}
+                isLoggedIn={!!userId}
+                onLoginPrompt={() => alert("Login to like items")}
+                onToggleLike={() => {
+                  // optional mutation logic here
+                }}
+                amount={`₦${item.price}`}
+                stock={item.amount_in_stock}
+                onPress={() =>
+                  router.push({
+                    pathname: "/product/[id]",
+                    params: { id: String(item.id) },
+                  })
+                }
+                outlet={activeOutlet}
+              />
+            </ThemedView>
+          ))}
+        </ThemedView>
+      )}
 
       <CustomOutlineButton
         title="Have any Questions? Send us a message"
         color={theme.orange}
-        onPress={() => alert('Button pressed!')}
+        onPress={() => alert("Button pressed!")}
         style={styles.bottomOutlineButton}
       />
     </ScrollView>
@@ -179,30 +197,30 @@ export default function Products() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: Platform.OS === 'android' ? 32 : 40,
+    paddingTop: Platform.OS === "android" ? 32 : 40,
     paddingBottom: 60,
   },
   gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
     paddingVertical: 40,
     margin: 8,
-    gap:12
+    gap: 12,
   },
   cardWrapper: {
-    width: '48%',
+    width: "48%",
     marginBottom: 60,
   },
   bottomOutlineButton: {
-    width: '90%',
-    alignSelf: 'center',
+    width: "90%",
+    alignSelf: "center",
     marginTop: 20,
   },
   categoryDropdown: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
     gap: 10,
     marginTop: 10,
     paddingHorizontal: 20,
@@ -211,13 +229,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 20,
     marginBottom: 10,
   },
   center: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
