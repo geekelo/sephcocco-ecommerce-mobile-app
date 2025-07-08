@@ -76,12 +76,7 @@ export default function SigninScreen() {
           </Link>
         </Text>
 
-        <Link
-          style={[styles.loginLink, { color: '#880808', textAlign: 'center' }]}
-          href="/auth/forgotPassword"
-        >
-          Forgot Password?
-        </Link>
+       
       </View>
     </ThemedView>
   );
