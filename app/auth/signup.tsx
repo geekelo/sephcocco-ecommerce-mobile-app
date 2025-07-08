@@ -27,22 +27,17 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+ 
 
   const { mutate: signup, isPending } = useSignup();
 
   const handleSignup = () => {
-    if (!name || !address || !email || !phoneNumber || !whatsappNumber || !password) {
+    if (!name || !address || !email || !phoneNumber || !whatsappNumber ) {
       Alert.alert('Missing Fields', 'Please fill all required fields.');
       return;
     }
 
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-
+    
     signup(
       {
         name,
@@ -124,20 +119,7 @@ export default function SignupScreen() {
               onChangeText={setWhatsappNumber}
               keyboardType="phone-pad"
             />
-            <InputField
-              label="Create Password"
-              placeholder="Enter password"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
-            <InputField
-              label="Confirm Password"
-              placeholder="Confirm password"
-              secureTextEntry
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-            />
+           
 
             <CustomButton
               text={isPending ? 'Signing Up...' : 'Sign Up Now'}
