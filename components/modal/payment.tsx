@@ -1,17 +1,16 @@
-// components/modals/PaymentModal.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Modal,
   View,
   StyleSheet,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import CustomButton from '../ui/CustomButton';
 import { Colors } from '@/constants/Colors';
-import { SuccessModal } from './sucess';
 
 type PaymentDetail = {
   label: string;
@@ -25,17 +24,28 @@ type Props = {
   details: PaymentDetail[];
   onConfirm?: () => void;
   buttonText?: string;
+  isLoading?: boolean; // ✅ Added here
 };
 
-const PaymentModal = ({ visible, onClose, title, details, onConfirm, buttonText = 'Confirm Payment' }: Props) => {
-  
+const PaymentModal = ({
+  visible,
+  onClose,
+  title,
+  details,
+  onConfirm,
+  buttonText = 'Confirm Payment',
+  isLoading = false, // ✅ Default false
+}: Props) => {
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
         <View style={styles.content}>
-          {/* Static Header */}
+          {/* Header */}
           <View style={styles.header}>
-            <Image source={require('@/assets/images/SEPHCOCO LOUNGE 3.png')} style={styles.logo} />
+            <Image
+              source={require('@/assets/images/SEPHCOCO LOUNGE 3.png')}
+              style={styles.logo}
+            />
             <TouchableOpacity onPress={onClose} style={styles.iconCircle}>
               <Ionicons name="close" size={20} color={Colors.light.text} />
             </TouchableOpacity>
@@ -56,8 +66,13 @@ const PaymentModal = ({ visible, onClose, title, details, onConfirm, buttonText 
             </View>
           ))}
 
-          <CustomButton text={buttonText} onPress={onConfirm || onClose} style={styles.button} />
-
+          <CustomButton
+            text={isLoading ? 'Submitting...' : buttonText}
+            onPress={onConfirm || onClose}
+            disabled={isLoading}
+            
+            style={styles.button}
+          />
         </View>
       </View>
     </Modal>
@@ -81,7 +96,6 @@ const styles = StyleSheet.create({
     padding: 34,
     alignItems: 'center',
     elevation: 4,
-    marginHorizontal:'auto'
   },
   header: {
     flexDirection: 'row',
