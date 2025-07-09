@@ -5,50 +5,94 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Button,
+  ActivityIndicator,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import PaymentModal from "../modal/payment";
 import { SuccessModal } from "../modal/sucess";
 import { router } from "expo-router";
+import { usePayment } from "@/mutation/usePayment";
+import { getUser } from "@/lib/tokenStorage";
+import { useOutlet } from "@/context/outletContext";
 
 type PaymentMethodProps = {
   address: string;
-  product: { price: any };
+  product: { price: number };
   quantity: number;
 };
-
 export default function PaymentMethod({
   address,
   product,
   quantity,
-}: PaymentMethodProps) {
-  const [paymentMethod, setPaymentMethod] = useState<"bank" | "online" | null>(
-    null
-  );
-  const [showBankDetails, setShowBankDetails] = useState(false);
-
+  orderIds = [], // Add this as a prop
+}: PaymentMethodProps & { orderIds: string[] }) {
+  const [paymentMethod, setPaymentMethod] = useState<"bank" | "online" | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  const { activeOutlet } = useOutlet(); // Use correct hook
+  const { mutate: submitPayment, isPending: isSubmitting } = usePayment();
 
   const itemTotal = product.price * quantity;
   const totalCost = itemTotal;
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const u = await getUser();
+      setUser(u);
+    };
+    fetchUser();
+  }, []);
+
   const handleBankTransfer = () => {
     setPaymentMethod("bank");
-    setShowBankDetails(true);
-    setShowModal(true); // show immediately on selection
+    setShowModal(true);
   };
 
   const handleOnlinePayment = () => {
     setPaymentMethod("online");
-    setShowBankDetails(false);
+    setShowModal(false);
+  };
+
+  const handleBankPaymentConfirm = () => {
+    if (!user?.transaction_ref || !activeOutlet) {
+      alert("Missing user or outlet info.");
+      return;
+    }
+
+    if (!orderIds.length) {
+      alert("No order ID provided.");
+      return;
+    }
+
+    submitPayment(
+      {
+        outlet: activeOutlet,
+        orderIds,
+        amount: totalCost,
+        paymentMethod: "bank_transfer",
+        transactionId: user.transaction_ref,
+      },
+      {
+        onSuccess: () => {
+          setShowModal(false);
+          setTimeout(() => setShowSuccessModal(true), 300);
+        },
+        onError: (err) => {
+          console.error("❌ Payment error", err);
+          alert("Payment failed. Try again.");
+        },
+      }
+    );
   };
 
   const paymentDetails = [
     { label: "Account Number:", value: "1234567890" },
     { label: "Bank Name:", value: "SmartSphere Inc." },
-    { label: "Reference Code:", value: "#REF1234" },
+    { label: "Reference Code:", value: user?.transaction_ref ?? "N/A" },
   ];
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.paymentSection}>
@@ -100,29 +144,24 @@ export default function PaymentMethod({
         </View>
       </View>
 
-
       <View style={styles.orderTotalSection}>
         <View style={styles.orderTotalRow}>
           <Text style={styles.orderTotalLabel}>Subtotal</Text>
-          <Text style={styles.orderTotalValue}>${itemTotal.toFixed(2)}</Text>
+          <Text style={styles.orderTotalValue}>₦{itemTotal.toFixed(2)}</Text>
         </View>
         <View style={[styles.orderTotalRow, styles.grandTotal]}>
           <Text style={styles.grandTotalLabel}>Total</Text>
-          <Text style={styles.grandTotalValue}>${totalCost.toFixed(2)}</Text>
+          <Text style={styles.grandTotalValue}>₦{totalCost.toFixed(2)}</Text>
         </View>
       </View>
-      
-
 
       <PaymentModal
         visible={showModal}
         onClose={() => setShowModal(false)}
         title="Make Payment"
         details={paymentDetails}
-        onConfirm={() => {
-          setShowModal(false);
-          setTimeout(() => setShowSuccessModal(true), 300);
-        }}
+        onConfirm={handleBankPaymentConfirm}
+        isLoading={isSubmitting}
       />
 
       <SuccessModal
@@ -151,19 +190,16 @@ export default function PaymentMethod({
           }
         }}
       >
-        <Text style={styles.checkoutButtonText}>
-          {paymentMethod === "bank" ? "Complete Order" : "Proceed to Payment"}
-        </Text>
+        {isSubmitting ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.checkoutButtonText}>
+            {paymentMethod === "bank"
+              ? "I HAVE PAID"
+              : "Proceed to Online Payment"}
+          </Text>
+        )}
       </TouchableOpacity>
-
-      <SuccessModal
-        visible={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
-        onButtonPress={() => {
-          setShowSuccessModal(false);
-          router.push("/pharmacy");
-        }}
-      />
     </ScrollView>
   );
 }
