@@ -46,16 +46,13 @@ export const OrderItem: React.FC<OrderItemProps> = ({
 
   const increment = () => setQuantity((q) => q + 1);
   const decrement = () => setQuantity((q) => (q > 1 ? q - 1 : q));
-
 const toggleCheckbox = () => {
   const newChecked = !isSelected;
   setIsSelected(newChecked);
-  try {
-    onpress?.(); // Safe optional chaining
-  } catch (error) {
-    console.warn("Checkbox toggle failed:", error);
-  }
+
 };
+
+
 
 
   const totalPrice = (order.price * quantity).toFixed(2);
@@ -124,19 +121,25 @@ const handleDelete = () => {
     },
   });
 };
+
 const getImageSource = () => {
-  const uri = order.products?.[0]?.main_image_url;
+  const uri = order?.products?.[0]?.main_image_url;
 
-  if (uri && typeof uri === 'string') {
-    return { uri }; // remote image
+  // ✅ Only return if it's a valid HTTP(S) string
+  if (
+    typeof uri === 'string' &&
+    uri.trim() !== '' &&
+    (uri.startsWith('http://') || uri.startsWith('https://'))
+  ) {
+    return { uri };
   }
 
-  if (typeof order.image === 'number') {
-    return order.image; // local asset number like require('...')
-  }
-
-  return require('@/assets/images/logo.png'); // default fallback
+  // ✅ fallback image (e.g. local asset)
+  return require('@/assets/images/logo.png');
 };
+
+
+
 
   return (
     <Animated.View
@@ -148,19 +151,26 @@ const getImageSource = () => {
       ]}
     >
       <View style={styles.imageContainer}>
-   <Image source={getImageSource()} style={styles.image} />
+ {/* <Image
+  source={getImageSource()}
+  style={styles.image}
+  onError={() => console.warn("🖼️ Image failed to load")}
+/> */}
 
+  <View style={styles.checkboxContainer}>
+   <TouchableOpacity
+  onPress={toggleCheckbox}
+  style={[
+    styles.fakeCheckbox,
+    { backgroundColor: isSelected ? '#4CAF50' : '#fff' },
+  ]}
+>
+  {isSelected && <Text style={styles.fakeCheckmark}>✓</Text>}
+</TouchableOpacity>
 
+  </View>
+</View>
 
-        <View style={styles.checkboxContainer}>
-          <Checkbox
-            checked={isSelected}
-            onToggle={toggleCheckbox}
-            size={28}
-            color="#4CAF50"
-          />
-        </View>
-      </View>
 
       <View style={styles.orderInfo}>
         <Text style={styles.productOrderName}>{order.name}</Text>
@@ -292,6 +302,21 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: '#ccc',
   },
+  fakeCheckbox: {
+  width: 28,
+  height: 28,
+  borderWidth: 1.5,
+  borderColor: '#ccc',
+  borderRadius: 6,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+fakeCheckmark: {
+  color: '#fff',
+  fontWeight: 'bold',
+  fontSize: 18,
+},
+
   qtyBtnText: {
     color: '#000',
     fontSize: 18,

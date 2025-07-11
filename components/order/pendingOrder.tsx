@@ -28,7 +28,8 @@ const PendingOrders = () => {
   const { activeOutlet } = useOutlet();
   const [userId, setUserId] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState<"Unpaid" | "InDelivery">("Unpaid");
-  const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
+  const [selectedOrders, setSelectedOrders] = useState<Order[]>([]);
+
   const [showOrderModal, setShowOrderModal] = useState(false);
 
   useEffect(() => {
@@ -60,26 +61,51 @@ console.log('del',inDeliveryOrders)
   const error =
     selectedTab === "Unpaid" ? unpaidError : deliveryError;
 
-  const isButtonEnabled = !!currentOrder;
+  const isButtonEnabled = selectedOrders.length > 0;
 
-  const similarDiscountProducts: SimilarProduct[] = currentOrder
-    ? getSimilarOrderProducts(currentOrder)
+const similarDiscountProducts: SimilarProduct[] =
+  selectedOrders.length > 0
+    ? selectedOrders.flatMap(getSimilarOrderProducts)
     : [];
 
-  const handleOrderClick = (order: Order) => setCurrentOrder(order);
+
+  const handleOrderClick = (order: Order) => {
+  const exists = selectedOrders.some((o) => o.id === order.id);
+
+  if (exists) {
+    setSelectedOrders((prev) => prev.filter((o) => o.id !== order.id));
+  } else {
+    setSelectedOrders((prev) => [...prev, order]);
+  }
+};
+
   const handleBack = () => navigation.goBack();
   const handleButtonPress = () => setShowOrderModal(true);
-
 const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
-  console.log('id',item.id)
+  const product = item.product || {};
+
+  const mainImageUrl =
+    typeof product.main_image_url === "string" &&
+    product.main_image_url.startsWith("http")
+      ? product.main_image_url
+      : undefined;
+
   const transformedOrder = {
     ...item,
-    name: item.product?.name,
+    name: product.name,
     price: parseFloat(item.unit_price),
-    image: item.product?.main_image_url
-      ? { uri: item.product.main_image_url }
-      : require("@/assets/images/logo.png"),
-    products: [item.product],
+    // image: mainImageUrl
+    //   ? { uri: mainImageUrl }
+    //   : require("@/assets/images/logo.png"),
+    products: [
+      {
+        id: product.id,
+        name: product.name,
+        price: parseFloat(item.unit_price),
+        quantity: item.quantity,
+        // main_image_url: mainImageUrl,
+      },
+    ],
   };
 
   if (selectedTab === "Unpaid") {
@@ -87,7 +113,8 @@ const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
       <OrderItem
         order={transformedOrder}
         index={index}
-        checked={currentOrder?.id === item.id}
+        checked={selectedOrders.some((o) => o.id === item.id)}
+
         onpress={() => handleOrderClick(transformedOrder)}
         userId={userId ?? ""}
         outlet={activeOutlet ?? ""}
@@ -95,20 +122,18 @@ const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
     );
   } else {
     return (
-     <DeliveryOrderItem
-  order={transformedOrder}
-  index={index}
-  isSelected={currentOrder?.id === item.id}
-  onClick={() => handleOrderClick(transformedOrder)}
-  onSeeMorePress={() =>
-    router.push({
-      pathname: "/order/[id]",
-      params: { id: item.id },
-    })
-  }
-/>
-
-
+      <DeliveryOrderItem
+        order={transformedOrder}
+        index={index}
+        isSelected={selectedOrders.some((o) => o.id === item.id)}
+        onClick={() => handleOrderClick(transformedOrder)}
+        onSeeMorePress={() =>
+          router.push({
+            pathname: "/order/[id]",
+            params: { id: item.id },
+          })
+        }
+      />
     );
   }
 };
@@ -143,9 +168,10 @@ const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
             key={tab}
             style={[styles.tab, selectedTab === tab && styles.activeTab]}
             onPress={() => {
-              setSelectedTab(tab as "Unpaid" | "InDelivery");
-              setCurrentOrder(null);
-            }}
+  setSelectedTab(tab as "Unpaid" | "InDelivery");
+  setSelectedOrders([]); // reset selection
+}}
+
           >
             <Text
               style={[
@@ -176,13 +202,14 @@ const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
       {selectedTab === "Unpaid" && (
         <View style={styles.selectedOrderFooter}>
           <Text style={styles.selectedOrderText}>
-            {currentOrder
-              ? `${currentOrder.products.length} item(s) selected`
-              : "No item selected"}
+          {selectedOrders.length > 0
+  ? `${selectedOrders.length} order(s) selected`
+  : "No order selected"}
+
           </Text>
           <TouchableOpacity
             style={[styles.actionBtn, !isButtonEnabled && styles.disabledBtn]}
-            disabled={!isButtonEnabled}
+           
             onPress={handleButtonPress}
           >
             <Feather name="credit-card" size={20} color="#fff" />
@@ -209,12 +236,13 @@ const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
         transparent={true}
         onRequestClose={() => setShowOrderModal(false)}
       >
-        <OrderModal
-          visible={true}
-          product={currentOrder as any}
-          onClose={() => setShowOrderModal(false)}
-          outlet={activeOutlet ?? ""}
-        />
+       <OrderModal
+  visible={true}
+  product={selectedOrders[0] as any} // or handle multiple if supported
+  onClose={() => setShowOrderModal(false)}
+  outlet={activeOutlet ?? ""}
+/>
+
       </Modal>
     </View>
   );

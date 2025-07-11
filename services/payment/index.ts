@@ -1,5 +1,6 @@
 import { apiClient } from "../api.service";
 
+// ✅ Submit Payment
 export const iHavePaid = async (
   outlet: string,
   orderIds: string[],
@@ -7,13 +8,13 @@ export const iHavePaid = async (
   paymentMethod: string,
   transactionId: string
 ) => {
-  const paymentPath = `sephcocco_${outlet}_payments`;
-  const url = `/api/v1/restaurant/${paymentPath}`;
+  const paymentKey = `sephcocco_${outlet}_payment`;
+  const url = `/${outlet}/sephcocco_${outlet}_payments`;
 
   const client = await apiClient();
 
   const payload = {
-    sephcocco_restaurant_payment: {
+    [paymentKey]: {
       order_ids: orderIds,
       amount,
       payment_method: paymentMethod,
@@ -22,6 +23,28 @@ export const iHavePaid = async (
   };
 
   const response = await client.post(url, payload);
+  return response.data;
+};
 
+
+export const fetchPayments = async (
+  outlet: string,
+  filters: { status?: string } = {},
+  page = 1,
+  perPage = 10
+) => {
+  const paymentPath = `sephcocco_${outlet}_payments`;
+  const url = `/${outlet}/${paymentPath}`;
+
+  const client = await apiClient();
+
+  const params = {
+    ...filters,
+    page,
+    per_page: perPage,
+  };
+console.log(url)
+  const response = await client.get(url, { params });
+console.log(response)
   return response.data;
 };
