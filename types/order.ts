@@ -1,7 +1,7 @@
 export interface Order {
   id: string;
   name: string;
-  image: string;
+  image?: string;
   price: number;
   ratingCount: number;
   status: 'Pending' | 'Completed' | string;
