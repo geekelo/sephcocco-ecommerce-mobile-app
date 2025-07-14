@@ -15,7 +15,8 @@ import {
 import { Card } from '../common/ProductCard';
 import { router } from 'expo-router';
 import axios from 'axios';
-import { useProducts } from '@/mutation/useProducts';
+import { useLikeProduct, useProducts, useUnlikeProduct } from '@/mutation/useProducts';
+import { useOutlet } from '@/context/outletContext';
 type ProductListProps = {
   outlet: 'pharmacy' | 'restaurant' | 'lounge';
   isLoggedIn: boolean;
@@ -30,8 +31,10 @@ export default function ProductList({ outlet, isLoggedIn, onLoginPrompt, userId 
  const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const { width } = useWindowDimensions();
-
+const { activeOutlet } = useOutlet();
   const { data, isLoading, error } = useProducts(outlet, userId);
+const likeMutation = useLikeProduct(activeOutlet ?? "");
+const unlikeMutation = useUnlikeProduct(activeOutlet ?? "");
 
   const numColumns = width > 768 ? 3 : width > 300 ? 2 : 1;
   const cardWidth = (width - 60 - (numColumns - 1) * 16) / numColumns;
@@ -75,10 +78,18 @@ out_of_stock_status={item.out_of_stock_status}
   likedByUser={item.liked_by_user} // ✅ assuming API returns this field
   onLoginPrompt={onLoginPrompt}
   onToggleLike={() => {
-    if (!isLoggedIn) return;
-    // You can later wire this to a mutation hook
-    console.log('Toggle like for product ID:', item.id);
-  }}
+  if (!userId) {
+    alert("Login to like items");
+    return;
+  }
+
+  if (item.liked_by_user) {
+    unlikeMutation.mutate(item.id);
+  } else {
+    likeMutation.mutate(item.id);
+  }
+}}
+
   onPress={() =>
     router.push({
       pathname: '/product/[id]',
