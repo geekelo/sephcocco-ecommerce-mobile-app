@@ -8,13 +8,13 @@ export const getAllProducts = async (outlet: string, userId: string | null) => {
   const url = `/${outlet}/${productPath}`;
 
   const client = await apiClient();
-console.log(client)
+
   const response = await client.get(url, {
     params: {
       user_id: userId ?? undefined,
     },
   });
-console.log(response)
+
   return response.data.products ?? response.data;
 };
 
@@ -27,5 +27,29 @@ export const getProductById = async (outlet: string, id: string) => {
 
   const response = await client.get(url);
 
+  return response.data.product ?? response.data;
+};
+
+// ✅ Like a product (POST)
+export const likeProduct = async (outlet: string, id: string) => {
+  const productPath = `sephcocco_${outlet}_products`;
+  const url = `/api/v1/${outlet}/${productPath}/${id}/like`;
+
+  const client = await apiClient();
+
+  const response = await client.post(url);
+console.log(response)
+  return response.data.product ?? response.data;
+};
+
+// ✅ Unlike a product (POST)
+export const unlikeProduct = async (outlet: string, id: string) => {
+  const productPath = `sephcocco_${outlet}_products`;
+  const url = `/api/v1/${outlet}/${productPath}/${id}/unlike`;
+
+  const client = await apiClient();
+
+  const response = await client.post(url);
+console.log(response)
   return response.data.product ?? response.data;
 };

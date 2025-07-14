@@ -18,7 +18,7 @@ import { CustomOutlineButton } from "../ui/CustomOutlineButton";
 import { router } from "expo-router";
 import { useOutlet } from "@/context/outletContext"; 
 import { getUser } from "@/lib/tokenStorage";
-import { useProducts } from "@/mutation/useProducts";
+import { useLikeProduct, useProducts, useUnlikeProduct } from "@/mutation/useProducts";
 import { useProductCategories } from "@/mutation/useCategory";
 import { useCreateOrder } from "@/mutation/useOrders";
 
@@ -34,6 +34,8 @@ export default function Products() {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const createOrderMutation = useCreateOrder(activeOutlet ?? "");
+const likeMutation = useLikeProduct(activeOutlet ?? "");
+const unlikeMutation = useUnlikeProduct(activeOutlet ?? "");
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -167,9 +169,19 @@ export default function Products() {
                 likedByUser={item.liked_by_user}
                 isLoggedIn={!!userId}
                 onLoginPrompt={() => alert("Login to like items")}
-                onToggleLike={() => {
-                  // optional mutation logic here
-                }}
+               onToggleLike={() => {
+  if (!userId) {
+    alert("Login to like items");
+    return;
+  }
+
+  if (item.liked_by_user) {
+    unlikeMutation.mutate(item.id);
+  } else {
+    likeMutation.mutate(item.id);
+  }
+}}
+
                 amount={`₦${item.price}`}
                 stock={item.amount_in_stock}
                 onPress={() =>
