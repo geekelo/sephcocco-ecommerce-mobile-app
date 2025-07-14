@@ -15,14 +15,16 @@ export const iHavePaid = async (
 
   const payload = {
     [paymentKey]: {
-      order_ids: orderIds,
+      orders_ids: orderIds,
       amount,
       payment_method: paymentMethod,
       transaction_id: transactionId,
     },
   };
-
+console.log('payload',payload)
   const response = await client.post(url, payload);
+  console.log(url)
+  console.log(response, 'paymentres')
   return response.data;
 };
 

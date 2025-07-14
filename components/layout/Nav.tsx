@@ -14,7 +14,7 @@ import { Colors } from "@/constants/Colors";
 import { Link, useRouter } from "expo-router"; // added useRouter for navigation
 import { useOutlet } from "@/context/outletContext";
 import { Routes } from "@/routes";
-import { getUser } from "@/lib/tokenStorage";
+import { getUser, logout } from "@/lib/tokenStorage";
 
 const windowHeight = Dimensions.get("window").height;
 const windowWidth = Dimensions.get("window").width;
@@ -38,6 +38,10 @@ useEffect(() => {
   fetchUser();
 }, []);
 
+const handleLogout = async () => {
+  await logout();
+  router.replace('/auth/signIn'); // or your auth screen
+};
   const router = useRouter();
 
   const toggleSidebar = () => {
@@ -215,12 +219,14 @@ useEffect(() => {
           {/* Bottom Icons */}
           <View style={styles.bottomIcons}>
             <TouchableOpacity
-              style={styles.iconItem}
-              accessibilityRole="button"
-              accessibilityLabel="Logout"
-            >
-              <Feather name="log-out" size={30} color={theme.text} />
-            </TouchableOpacity>
+  style={styles.iconItem}
+  accessibilityRole="button"
+  accessibilityLabel="Logout"
+  onPress={handleLogout} // ✅ Triggers the logout
+>
+  <Feather name="log-out" size={30} color={theme.text} />
+</TouchableOpacity>
+
             {userId ? (
   <TouchableOpacity
     style={styles.iconItem}

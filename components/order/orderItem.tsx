@@ -46,11 +46,16 @@ export const OrderItem: React.FC<OrderItemProps> = ({
 
   const increment = () => setQuantity((q) => q + 1);
   const decrement = () => setQuantity((q) => (q > 1 ? q - 1 : q));
-const toggleCheckbox = () => {
+
+  const toggleCheckbox = () => {
   const newChecked = !isSelected;
   setIsSelected(newChecked);
 
+  if (onpress) {
+    onpress(); // Notify parent of selection change
+  }
 };
+
 
 
 
@@ -122,25 +127,25 @@ const handleDelete = () => {
   });
 };
 
-const getImageSource = () => {
-  const uri = order?.products?.[0]?.main_image_url;
+// const getImageSource = () => {
+//   const uri = order?.products?.[0]?.main_image_url;
 
-  // ✅ Only return if it's a valid HTTP(S) string
-  if (
-    typeof uri === 'string' &&
-    uri.trim() !== '' &&
-    (uri.startsWith('http://') || uri.startsWith('https://'))
-  ) {
-    return { uri };
-  }
+//   // ✅ Only return if it's a valid HTTP(S) string
+//   if (
+//     typeof uri === 'string' &&
+//     uri.trim() !== '' &&
+//     (uri.startsWith('http://') || uri.startsWith('https://'))
+//   ) {
+//     return { uri };
+//   }
 
-  // ✅ fallback image (e.g. local asset)
-  return require('@/assets/images/logo.png');
-};
-
-
+//   // ✅ fallback image (e.g. local asset)
+//   return require('@/assets/images/logo.png');
+// };
 
 
+
+console.log('orders', order)
   return (
     <Animated.View
       entering={FadeInUp.delay(index * 100).duration(300)}
@@ -157,7 +162,7 @@ const getImageSource = () => {
   onError={() => console.warn("🖼️ Image failed to load")}
 /> */}
 
-  <View style={styles.checkboxContainer}>
+  {/* <View style={styles.checkboxContainer}>
    <TouchableOpacity
   onPress={toggleCheckbox}
   style={[
@@ -168,7 +173,14 @@ const getImageSource = () => {
   {isSelected && <Text style={styles.fakeCheckmark}>✓</Text>}
 </TouchableOpacity>
 
-  </View>
+  </View> */}
+
+  <TouchableOpacity
+  onPress={toggleCheckbox}
+  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+  activeOpacity={1}
+/>
+
 </View>
 
 

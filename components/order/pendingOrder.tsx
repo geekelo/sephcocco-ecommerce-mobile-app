@@ -80,15 +80,15 @@ const similarDiscountProducts: SimilarProduct[] =
 };
 
   const handleBack = () => navigation.goBack();
-  const handleButtonPress = () => setShowOrderModal(true);
+  const handleButtonPress = () => setShowOrderModal(true); 
 const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
   const product = item.product || {};
 
-  const mainImageUrl =
-    typeof product.main_image_url === "string" &&
-    product.main_image_url.startsWith("http")
-      ? product.main_image_url
-      : undefined;
+  // const mainImageUrl =
+  //   typeof product.main_image_url === "string" &&
+  //   product.main_image_url.startsWith("http")
+  //     ? product.main_image_url
+  //     : undefined;
 
   const transformedOrder = {
     ...item,
@@ -150,6 +150,8 @@ const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
       </Text>
     );
   }
+
+  console.log('selected',selectedOrders)
 
   return (
     <View style={styles.container}>
@@ -219,7 +221,7 @@ const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
       )}
 
       {/* Similar Discounts */}
-      {similarDiscountProducts.length > 0 && (
+      {/* {similarDiscountProducts.length > 0 && (
         <View style={styles.similarDiscountsContainer}>
           <SimilarProducts
             similar={similarDiscountProducts}
@@ -227,7 +229,7 @@ const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
             title="Similar Discounts"
           />
         </View>
-      )}
+      )} */}
 
       {/* Order Modal */}
       <Modal
