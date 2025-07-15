@@ -33,10 +33,10 @@ export const getProductById = async (outlet: string, id: string) => {
 // ✅ Like a product (POST)
 export const likeProduct = async (outlet: string, id: string) => {
   const productPath = `sephcocco_${outlet}_products`;
-  const url = `/api/v1/${outlet}/${productPath}/${id}/like`;
+  const url = `/${outlet}/${productPath}/${id}/like?${id}`;
 
   const client = await apiClient();
-
+console.log('url', url)
   const response = await client.post(url);
 console.log(response)
   return response.data.product ?? response.data;
@@ -45,11 +45,12 @@ console.log(response)
 // ✅ Unlike a product (POST)
 export const unlikeProduct = async (outlet: string, id: string) => {
   const productPath = `sephcocco_${outlet}_products`;
-  const url = `/api/v1/${outlet}/${productPath}/${id}/unlike`;
+  const url = `/${outlet}/${productPath}/${id}/unlike`;
 
   const client = await apiClient();
 
   const response = await client.post(url);
+  
 console.log(response)
   return response.data.product ?? response.data;
 };
