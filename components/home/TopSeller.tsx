@@ -12,6 +12,8 @@ import {
 import { Card } from '../common/ProductCard';
 import { router } from 'expo-router';
 import { productData } from '../common/ProductData';
+import { useOutlet } from '@/context/outletContext';
+import { useLikeProduct, useUnlikeProduct } from '@/mutation/useProducts';
 type TopSellerProps = {
   outlet?: string;
   isLoggedIn: boolean;
@@ -21,11 +23,12 @@ type TopSellerProps = {
 export default function TopSeller({ outlet, isLoggedIn, onLoginPrompt }: TopSellerProps) {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
-
+const { activeOutlet } = useOutlet();
   const filteredProducts = outlet
     ? productData.filter((item) => item.outlet === outlet)
     : productData;
-
+const likeMutation = useLikeProduct(activeOutlet ?? "");
+const unlikeMutation = useUnlikeProduct(activeOutlet ?? "");
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.headerRow}>
@@ -48,6 +51,7 @@ export default function TopSeller({ outlet, isLoggedIn, onLoginPrompt }: TopSell
               outlet={item.outlet}
               isLoggedIn={isLoggedIn}
               onLoginPrompt={onLoginPrompt}
+              
               onPress={() =>
                 router.push({
                   pathname: '/product/[id]',

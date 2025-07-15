@@ -17,7 +17,7 @@ export default function SigninScreen() {
   const queryClient = useQueryClient();
 
   const [email, setEmail] = useState('');
-  const { mutate: login, isPending } = useLogin();
+  const { mutate: login, isPending, data } = useLogin();
 
   const handleLogin = () => {
     if (!email) {
@@ -31,6 +31,7 @@ export default function SigninScreen() {
         onSuccess: async () => {
           Alert.alert('Success', 'User logged in successfully.');
           const currentUser = await getUser();
+          console.log(currentUser)
           queryClient.invalidateQueries({ queryKey: ['products', currentUser?.id] });
           router.push('/ProductPage');
         },
@@ -44,7 +45,7 @@ export default function SigninScreen() {
     );
   };
 
-
+console.log(data)
   return (
     <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.imageWrapper}>
