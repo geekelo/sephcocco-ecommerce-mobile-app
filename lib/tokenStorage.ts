@@ -28,3 +28,13 @@ export const getUser = async (): Promise<any | null> => {
 export const deleteUser = async () => {
   await SecureStore.deleteItemAsync(USER_KEY);
 };
+
+export const logout = async () => {
+  try {
+    await deleteToken();
+    await deleteUser();
+    console.log('✅ User logged out successfully');
+  } catch (e) {
+    console.error('❌ Failed to log out user:', e);
+  }
+};

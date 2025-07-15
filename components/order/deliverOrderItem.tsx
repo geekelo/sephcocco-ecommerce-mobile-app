@@ -19,10 +19,10 @@ export const DeliveryOrderItem: React.FC<DeliveryOrderItemProps> = ({
   isSelected,
   onSeeMorePress,
 }) => {
-  const imageSource =
-  typeof order.image === "string"
-    ? { uri: order.image }
-    : order.image || require('@/assets/images/logo.png');
+  // const imageSource =
+  // typeof order.image === "string"
+  //   ? { uri: order.image }
+  //   : order.image || require('@/assets/images/logo.png');
 
   return (
     <TouchableOpacity
@@ -32,8 +32,8 @@ export const DeliveryOrderItem: React.FC<DeliveryOrderItemProps> = ({
     >
       <View style={styles.leftColumn}>
         <Checkbox checked={isSelected} onToggle={onClick} />
-     <Image source={imageSource} style={styles.image} />
-
+     {/* <Image source={imageSource} style={styles.image} />
+ */}
 
       </View>
 

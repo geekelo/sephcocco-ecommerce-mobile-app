@@ -5,50 +5,112 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Button,
+  ActivityIndicator,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import PaymentModal from "../modal/payment";
 import { SuccessModal } from "../modal/sucess";
 import { router } from "expo-router";
+import { usePayment } from "@/mutation/usePayment";
+import { getUser } from "@/lib/tokenStorage";
+import { useOutlet } from "@/context/outletContext";
 
 type PaymentMethodProps = {
   address: string;
-  product: { price: any };
+  product: { price: number };
   quantity: number;
+  orderIds: string[];
 };
 
 export default function PaymentMethod({
   address,
   product,
   quantity,
+  orderIds = [],
 }: PaymentMethodProps) {
-  const [paymentMethod, setPaymentMethod] = useState<"bank" | "online" | null>(
-    null
-  );
-  const [showBankDetails, setShowBankDetails] = useState(false);
-
+  const [paymentMethod, setPaymentMethod] = useState<"bank" | "online" | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  const { activeOutlet } = useOutlet();
+  const { mutate: submitPayment, isPending: isSubmitting, data } = usePayment();
 
   const itemTotal = product.price * quantity;
   const totalCost = itemTotal;
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const u = await getUser();
+      console.log("🧑‍💼 User fetched from storage:", u);
+      setUser(u);
+    };
+    fetchUser();
+  }, []);
+
   const handleBankTransfer = () => {
+    console.log("🏦 Bank transfer selected");
     setPaymentMethod("bank");
-    setShowBankDetails(true);
-    setShowModal(true); // show immediately on selection
+    setShowModal(true);
   };
 
   const handleOnlinePayment = () => {
+    console.log("💳 Online payment selected");
     setPaymentMethod("online");
-    setShowBankDetails(false);
+    setShowModal(false);
+  };
+
+  const handleBankPaymentConfirm = () => {
+    console.log("✅ Confirm bank transfer clicked");
+
+    if (!activeOutlet) {
+      console.warn("❌ Missing outlet info");
+      alert("Missing outlet info.");
+      return;
+    }
+
+    if (!orderIds.length) {
+      console.warn("❌ No order IDs provided");
+      alert("No order ID provided.");
+      return;
+    }
+
+    console.log("📦 Order IDs:", orderIds);
+    console.log("🛒 Product info:", product);
+    console.log("💰 Total cost:", totalCost);
+    console.log("🏷️ Payment reference:", user?.payment_ref);
+    console.log("📍 Outlet:", activeOutlet);
+
+    submitPayment(
+      {
+        outlet: activeOutlet,
+        orderIds,
+        amount: totalCost,
+        paymentMethod: "bank_transfer",
+        transactionId: user?.payment_ref,
+      },
+      {
+        onSuccess: () => {
+          console.log("✅ Payment submitted successfully");
+          setShowModal(false);
+          setTimeout(() => setShowSuccessModal(true), 300);
+        },
+        onError: (err) => {
+          console.error("❌ Payment failed:", err);
+          alert("Payment failed. Try again.");
+        },
+      }
+    );
   };
 
   const paymentDetails = [
     { label: "Account Number:", value: "1234567890" },
     { label: "Bank Name:", value: "SmartSphere Inc." },
-    { label: "Reference Code:", value: "#REF1234" },
+    { label: "Reference Code:", value: user?.payment_ref ?? "N/A" },
   ];
+
+  console.log("🔄 Payment response:", data);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.paymentSection}>
@@ -82,11 +144,7 @@ export default function PaymentMethod({
             onPress={handleOnlinePayment}
           >
             <View style={styles.paymentOptionInner}>
-              <MaterialCommunityIcons
-                name="credit-card"
-                size={24}
-                color="#4a5568"
-              />
+              <MaterialCommunityIcons name="credit-card" size={24} color="#4a5568" />
               <Text style={styles.paymentOptionLabel}>Online Payment</Text>
               {paymentMethod === "online" && (
                 <MaterialCommunityIcons
@@ -100,35 +158,37 @@ export default function PaymentMethod({
         </View>
       </View>
 
-
       <View style={styles.orderTotalSection}>
         <View style={styles.orderTotalRow}>
           <Text style={styles.orderTotalLabel}>Subtotal</Text>
-          <Text style={styles.orderTotalValue}>${itemTotal.toFixed(2)}</Text>
+          <Text style={styles.orderTotalValue}>₦{itemTotal.toFixed(2)}</Text>
         </View>
         <View style={[styles.orderTotalRow, styles.grandTotal]}>
           <Text style={styles.grandTotalLabel}>Total</Text>
-          <Text style={styles.grandTotalValue}>${totalCost.toFixed(2)}</Text>
+          <Text style={styles.grandTotalValue}>₦{totalCost.toFixed(2)}</Text>
         </View>
       </View>
-      
-
 
       <PaymentModal
         visible={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => {
+          console.log("🛑 Payment modal closed");
+          setShowModal(false);
+        }}
         title="Make Payment"
         details={paymentDetails}
-        onConfirm={() => {
-          setShowModal(false);
-          setTimeout(() => setShowSuccessModal(true), 300);
-        }}
+        onConfirm={handleBankPaymentConfirm}
+        isLoading={isSubmitting}
       />
 
       <SuccessModal
         visible={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
+        onClose={() => {
+          console.log("🎉 Success modal closed");
+          setShowSuccessModal(false);
+        }}
         onButtonPress={() => {
+          console.log("🔁 Redirecting to /pharmacy");
           setShowSuccessModal(false);
           router.push("/pharmacy");
         }}
@@ -137,33 +197,29 @@ export default function PaymentMethod({
       <TouchableOpacity
         style={[
           styles.checkoutButton,
-          (!paymentMethod || (paymentMethod === "bank" && !address)) &&
-            styles.checkoutButtonDisabled,
+          (!paymentMethod || (paymentMethod === "bank" && !address)) && styles.checkoutButtonDisabled,
         ]}
         disabled={!paymentMethod || (paymentMethod === "bank" && !address)}
         onPress={() => {
           if (paymentMethod === "bank") {
+            console.log("👆 'I HAVE PAID' clicked");
             setShowModal(true);
           } else if (paymentMethod === "online") {
+            console.log("💸 Proceeding with online payment");
             setTimeout(() => {
               setShowSuccessModal(true);
             }, 300);
           }
         }}
       >
-        <Text style={styles.checkoutButtonText}>
-          {paymentMethod === "bank" ? "Complete Order" : "Proceed to Payment"}
-        </Text>
+        {isSubmitting ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.checkoutButtonText}>
+            {paymentMethod === "bank" ? "I HAVE PAID" : "Proceed to Online Payment"}
+          </Text>
+        )}
       </TouchableOpacity>
-
-      <SuccessModal
-        visible={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
-        onButtonPress={() => {
-          setShowSuccessModal(false);
-          router.push("/pharmacy");
-        }}
-      />
     </ScrollView>
   );
 }
