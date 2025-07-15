@@ -67,12 +67,11 @@ export function Card({
     onToggleLike?.();
   };
   const isOutOfStock = out_of_stock_status === true;
-const isLiked = likedByUser ?? favorites > 0;
+const isLiked = likedByUser ;
 
 
   return (
     <ThemedView style={styles.card}>
-      {/* ❤️ Like Button at top-right */}
       <TouchableOpacity
         style={styles.likeButton}
         onPress={handleToggleLike}

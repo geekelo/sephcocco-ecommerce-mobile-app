@@ -77,18 +77,39 @@ console.log(data)
 out_of_stock_status={item.out_of_stock_status}
   likedByUser={item.liked_by_user} // ✅ assuming API returns this field
   onLoginPrompt={onLoginPrompt}
-  onToggleLike={() => {
+ onToggleLike={() => {
   if (!userId) {
     alert("Login to like items");
     return;
   }
 
   if (item.liked_by_user) {
-    unlikeMutation.mutate(item.id);
+    unlikeMutation.mutate(item.id, {
+      onSuccess: (data) => {
+        console.log("✅ UNLIKE success:", data);
+      },
+      onError: (error) => {
+        console.error("❌ UNLIKE error:", error);
+      },
+      onSettled: () => {
+        console.log("🔄 UNLIKE mutation completed");
+      },
+    });
   } else {
-    likeMutation.mutate(item.id);
+    likeMutation.mutate(item.id, {
+      onSuccess: (data) => {
+        console.log("✅ LIKE success:", data);
+      },
+      onError: (error) => {
+        console.error("❌ LIKE error:", error);
+      },
+      onSettled: () => {
+        console.log("🔄 LIKE mutation completed");
+      },
+    });
   }
 }}
+
 
   onPress={() =>
     router.push({
