@@ -5,6 +5,10 @@ import {
   Modal,
   TouchableOpacity,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import OrderSummary from './orderSummary';
@@ -18,77 +22,89 @@ interface OrderModalProps {
   outlet: string;
 }
 
-const OrderModal: React.FC<OrderModalProps> = ({ product, visible, onClose, outlet }) => {
+const OrderModal: React.FC<OrderModalProps> = ({
+  product,
+  visible,
+  onClose,
+  outlet,
+}) => {
   const [quantity, setQuantity] = useState<number>(1);
   const [address, setAddress] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'orderSummary' | 'paymentMethod'>('orderSummary');
 
   const extractOrderIds = () => {
-  const maybeOrders = (product as any)?.products;
-
-  if (Array.isArray(maybeOrders) && maybeOrders.length > 0) {
-    // Extract all order_numbers from each order
-    return maybeOrders.map((order: any) => order.order_number).filter(Boolean);
-  }
-
-  // Single product with one order
-  return [(product as any)?.order_number].filter(Boolean);
-};
-
+    const maybeOrders = (product as any)?.products;
+    if (Array.isArray(maybeOrders) && maybeOrders.length > 0) {
+      return maybeOrders.map((order: any) => order.order_number).filter(Boolean);
+    }
+    return [(product as any)?.order_number].filter(Boolean);
+  };
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Order Payment</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Feather name="x" size={24} color="white" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Tab Switcher */}
-          <View style={styles.tabBar}>
-            <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'orderSummary' && styles.activeTabButton]}
-              onPress={() => setActiveTab('orderSummary')}
-            >
-              <Text style={[styles.tabText, activeTab === 'orderSummary' && styles.activeTabText]}>
-                Order Summary
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'paymentMethod' && styles.activeTabButton]}
-              onPress={() => setActiveTab('paymentMethod')}
-            >
-              <Text style={[styles.tabText, activeTab === 'paymentMethod' && styles.activeTabText]}>
-                Payment
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Tab Content */}
-          {activeTab === 'orderSummary' ? (
-            <OrderSummary
-              product={product}
-              quantity={quantity}
-              setQuantity={setQuantity}
-              address={address}
-              setAddress={setAddress}
-              outlet={outlet}
-            />
-          ) : (
-            <PaymentMethod
-              product={product}
-              quantity={quantity}
-              address={address}
-              orderIds={extractOrderIds()}
-            />
-          )}
-        </View>
+   <Modal
+  visible={visible}
+  animationType="slide"
+  onRequestClose={onClose}
+  presentationStyle="fullScreen"
+>
+  <View style={styles.overlay}>
+    <View style={styles.modalContainer}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Order Payment</Text>
+        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <Feather name="x" size={24} color="white" />
+        </TouchableOpacity>
       </View>
-    </Modal>
+
+      {/* Tab Switcher */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 'orderSummary' && styles.activeTabButton]}
+          onPress={() => setActiveTab('orderSummary')}
+        >
+          <Text style={[styles.tabText, activeTab === 'orderSummary' && styles.activeTabText]}>
+            Order Summary
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 'paymentMethod' && styles.activeTabButton]}
+          onPress={() => setActiveTab('paymentMethod')}
+        >
+          <Text style={[styles.tabText, activeTab === 'paymentMethod' && styles.activeTabText]}>
+            Payment
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Tab Content with KeyboardAvoidingView */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      >
+        {activeTab === 'orderSummary' ? (
+          <OrderSummary
+            product={product}
+            quantity={quantity}
+            setQuantity={setQuantity}
+            address={address}
+            setAddress={setAddress}
+            outlet={outlet}
+          />
+        ) : (
+          <PaymentMethod
+            product={product}
+            quantity={quantity}
+            address={address}
+            orderIds={extractOrderIds()}
+          />
+        )}
+      </KeyboardAvoidingView>
+    </View>
+  </View>
+</Modal>
+
   );
 };
 
@@ -97,11 +113,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.75)',
     justifyContent: 'center',
+    paddingHorizontal: 10,
   },
   modalContainer: {
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
-    height: '95%',
+    flex: 1,
     width: '95%',
     alignSelf: 'center',
     overflow: 'hidden',
@@ -154,6 +171,9 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: '#10b981',
     fontWeight: '700',
+  },
+  tabContent: {
+    flex: 1,
   },
 });
 
