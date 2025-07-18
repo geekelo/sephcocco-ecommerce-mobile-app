@@ -12,6 +12,7 @@ import {
 import { Entypo } from '@expo/vector-icons';
 import { Product } from '../types/types';
 import { useCreateOrder } from '@/mutation/useOrders';
+import { Image } from 'expo-image';
 
 type Props = {
   product: Product;
@@ -72,6 +73,10 @@ export default function OrderSummary({
         {/* Product Info */}
         <View style={styles.checkoutSection}>
           <Text style={styles.sectionTitle}>Order Summary</Text>
+          <Image
+            source={{ uri: product?.main_image_url ?? '' }}
+            style={styles.orderItemImage}
+          />
           <Text style={styles.productName}>{product.name}</Text>
           <Text style={styles.itemPrice}>₦ {product.price}</Text>
 
@@ -163,6 +168,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     flexGrow: 1,
     paddingBottom: 100,
+  },
+   orderItemImage: {
+    width:'100%',
+    height: 120,
+    borderRadius: 6,
+    marginRight: 20,
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e1e4e8',
   },
   checkoutSection: {
     backgroundColor: '#fff',

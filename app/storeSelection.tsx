@@ -1,34 +1,60 @@
-import { Image } from 'expo-image';
-import { StyleSheet, Text, View, useColorScheme, Pressable } from 'react-native';
-import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
-import { Colors } from '@/constants/Colors';
-import { router } from 'expo-router';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { useOutlet } from '@/context/outletContext';
+import { Image } from "expo-image";
+import {
+  StyleSheet,
+  Text,
+  View,
+  useColorScheme,
+  Pressable,
+} from "react-native";
+import { ThemedView } from "@/components/ThemedView";
+import { ThemedText } from "@/components/ThemedText";
+import { Colors } from "@/constants/Colors";
+import { router } from "expo-router";
+import { IconSymbol } from "@/components/ui/IconSymbol";
+import { useOutlet } from "@/context/outletContext";
 
 export default function StoreSelectionScreen() {
   const colorScheme = useColorScheme();
-  const theme = Colors[colorScheme ?? 'light'];
+  const theme = Colors[colorScheme ?? "light"];
 
-  const { setActiveOutlet } = useOutlet(); // ✅ access context setter
+  const { setActiveOutlet } = useOutlet();
 
   const options = [
-    { title: 'Go to Pharmacy', icon: 'pharmacy.fill', href: '/pharmacy', key: 'pharmacy' },
-    { title: 'Go to Restaurant', icon: 'restaurant.fill', href: '/restaurant', key: 'restaurant' },
-    { title: 'Go to Lounge', icon: 'lounge.fill', href: '/lounge', key: 'lounge' },
+    {
+      title: "Go to Pharmacy",
+      icon: "pharmacy.fill",
+      href: "/pharmacy",
+      key: "pharmacy",
+    },
+    {
+      title: "Go to Restaurant",
+      icon: "restaurant.fill",
+      href: "/restaurant",
+      key: "restaurant",
+    },
+    {
+      title: "Go to Lounge",
+      icon: "lounge.fill",
+      href: "/lounge",
+      key: "lounge",
+    },
   ];
 
   return (
-    <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
+    <ThemedView
+      style={[styles.container, { backgroundColor: theme.background }]}
+    >
       <View style={styles.imageWrapper}>
         <Image
-          source={require('@/assets/images/SEPHCOCO LOUNGE 3.png')}
+          source={require("@/assets/images/SEPHCOCO LOUNGE 3.png")}
           style={styles.logo}
         />
       </View>
 
-      <ThemedText type="title" style={[styles.headerText, { color: theme.text }]}>
+      <ThemedText
+        type="title"
+        style={[styles.headerText, { color: theme.text }]}
+      >
         Welcome to Sephcocco Outlet
       </ThemedText>
 
@@ -46,9 +72,10 @@ export default function StoreSelectionScreen() {
             key={index}
             style={[styles.optionButton, { borderColor: theme.borderorange }]}
             onPress={() => {
-              setActiveOutlet(item.key as 'pharmacy' | 'restaurant' | 'lounge'); // ✅ set outlet
-             router.push(item.href as any)
-            }}>
+              setActiveOutlet(item.key as "pharmacy" | "restaurant" | "lounge");
+              router.push(item.href as any);
+            }}
+          >
             <IconSymbol name={item.icon as any} size={22} color={theme.gray} />
             <Text style={[styles.optionTitle, { color: theme.text }]}>
               {item.title}
@@ -69,16 +96,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   imageWrapper: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   logo: {
     height: 67,
     width: 64,
   },
   headerText: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 22,
-    fontFamily: 'PTSerif-Regular',
+    fontFamily: "PTSerif-Regular",
     paddingTop: 100,
   },
   options: {
@@ -86,31 +113,31 @@ const styles = StyleSheet.create({
     margin: 30,
   },
   optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 0.4,
     borderRadius: 6,
     padding: 15,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   optionTitle: {
     fontSize: 18,
-    fontFamily: 'PTSerif-Regular',
+    fontFamily: "PTSerif-Regular",
     flex: 1,
     marginLeft: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   desc: {
-    fontStyle: 'italic',
+    fontStyle: "italic",
     fontSize: 24,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
     padding: 0,
     margin: 0,
   },
   text: {
     fontSize: 20,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 30,
   },
 });

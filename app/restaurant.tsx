@@ -10,34 +10,31 @@ import { Text } from "react-native";
 
 export default function RestaurantPage() {
   const { activeOutlet } = useOutlet();
-   const { user } = useAuth(); // ⬅️ isLoggedIn = Boolean(user)
-  
-    const isLoggedIn = !!user;
-  
-    const handleLoginPrompt = () => {
-      router.push(Routes.auth.login); // or use a modal
-    };
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  const isLoggedIn = !!user;
+
+  const handleLoginPrompt = () => {
+    router.push(Routes.auth.login);
+  };
 
   return (
     <Layout>
       <HeroPage />
-      {activeOutlet !== 'restaurant' ? (
-        <Text style={{ textAlign: 'center', marginTop: 50 }}>
+      {activeOutlet !== "restaurant" ? (
+        <Text style={{ textAlign: "center", marginTop: 50 }}>
           You're viewing {activeOutlet?.toUpperCase()} instead of RESTAURANT.
         </Text>
       ) : (
         <>
-                 <ProductList
-                   outlet="restaurant"
-                   isLoggedIn={isLoggedIn}
-                   onLoginPrompt={handleLoginPrompt}
-                 />
-                 <TopSeller
-                   outlet="restaurant"
-                   isLoggedIn={isLoggedIn}
-                   onLoginPrompt={handleLoginPrompt}
-                 />
-               </>
+          <ProductList
+            outlet="restaurant"
+            isLoggedIn={isLoggedIn}
+            onLoginPrompt={handleLoginPrompt}
+            userId={userId}
+          />
+       
+        </>
       )}
     </Layout>
   );

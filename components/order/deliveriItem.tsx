@@ -44,6 +44,20 @@ export const DeliveryItem: React.FC<OrderItemProps> = ({
   const totalPrice = (order.price * quantity).toFixed(2);
   const borderColors = getStatusStyle(order.status);
 
+const getImageSource = () => {
+  const uri = order?.products?.[0]?.main_image_url;
+
+  if (
+    typeof uri === 'string' &&
+    uri.trim() !== '' &&
+    (uri.startsWith('http://') || uri.startsWith('https://'))
+  ) {
+    return { uri };
+  }
+
+  return require('@/assets/images/logo.png');
+};
+
   return (
     <Animated.View
       entering={FadeInUp.delay(index * 100).duration(300)}
@@ -54,8 +68,11 @@ export const DeliveryItem: React.FC<OrderItemProps> = ({
       ]}
     >
       <View style={styles.imageContainer}>
-        <Image source={order.image} style={styles.image} />
-        
+       <Image
+         source={getImageSource()}
+         style={styles.image}
+         onError={() => console.warn("🖼️ Image failed to load")}
+       /> 
       </View>
 
       <View style={styles.orderInfo}>
