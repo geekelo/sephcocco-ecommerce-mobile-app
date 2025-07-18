@@ -24,42 +24,50 @@ import { SearchBar } from "@/components/common/SearchBar";
 import { StarRating } from "@/components/common/ratingCard";
 import CustomButton from "@/components/ui/CustomButton";
 import { CustomOutlineButton } from "@/components/ui/CustomOutlineButton";
-import { useProductById } from "@/mutation/useProducts";
+import { useProductById, useProducts } from "@/mutation/useProducts";
 import { useCreateOrder } from "@/mutation/useOrders";
 import OrderModal from "@/components/order/orderModal";
 
 
 const width = Dimensions.get("window").width;
+
 export default function ProductDetail() {
-  const { id } = useLocalSearchParams(); // id is string | string[] | undefined
+  const { id } = useLocalSearchParams();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? "light"];
   const navigation = useNavigation();
   const { activeOutlet } = useOutlet();
-const [orderModalVisible, setOrderModalVisible] = useState(false);
-
+  const [orderModalVisible, setOrderModalVisible] = useState(false);
   const productId = typeof id === "string" ? id : null;
   const [userId, setUserId] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
 
-  useEffect(() => {
-    getUser().then((user) => setUserId(user?.id ?? null));
-  }, []);
-
+  const { data: products } = useProducts(activeOutlet ?? "", userId);
   const {
     data: product,
     isLoading,
     isError,
   } = useProductById(activeOutlet ?? "", productId ?? "");
-
   const createOrderMutation = useCreateOrder(activeOutlet ?? "");
+
+  useEffect(() => {
+    getUser().then((user) => setUserId(user?.id ?? null));
+  }, []);
+
+  useEffect(() => {
+    if (products) {
+      setAllProducts(products);
+      setFilteredProducts(products);
+    }
+  }, [products]);
 
   const handlePlaceOrder = () => {
     if (!userId) {
       Alert.alert("Login Required", "Please login to place an order.");
       return;
     }
-
     if (!product || !activeOutlet) {
       Alert.alert("Error", "Missing product or outlet info.");
       return;
@@ -73,7 +81,6 @@ const [orderModalVisible, setOrderModalVisible] = useState(false);
       phone_number: "08012345678",
       additional_notes: "Buying directly from product page",
     };
-    console.log(payload)
 
     createOrderMutation.mutate(payload, {
       onSuccess: () => {
@@ -83,8 +90,32 @@ const [orderModalVisible, setOrderModalVisible] = useState(false);
         Alert.alert("Error", "Something went wrong. Please try again.");
       },
     });
-  }
+  };
+
   const toggleFilter = () => setFilterOpen(!filterOpen);
+
+  const handleFilter = (option: string) => {
+    let sorted = [...allProducts];
+
+    switch (option) {
+      case "Price: Low to High":
+        sorted.sort((a:any, b) => a.price - b.price);
+        break;
+      case "Price: High to Low":
+        sorted.sort((a, b) => b.price - a.price);
+        break;
+      case "Newest First":
+        sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case "Rating":
+        sorted.sort((a, b) => b.favorites - a.favorites);
+        break;
+      default:
+        break;
+    }
+
+    setFilteredProducts(sorted);
+  };
 
   if (!activeOutlet || !productId) {
     return (
@@ -116,7 +147,6 @@ const [orderModalVisible, setOrderModalVisible] = useState(false);
     "Price: Low to High",
     "Price: High to Low",
     "Newest First",
-    "Categories",
     "Rating",
   ];
 
@@ -127,6 +157,7 @@ const [orderModalVisible, setOrderModalVisible] = useState(false);
           onFilterToggle={toggleFilter}
           filterOptions={filterOptions}
           filterOpen={filterOpen}
+          onFilterSelect={handleFilter}
         />
 
         <TouchableOpacity
@@ -139,10 +170,6 @@ const [orderModalVisible, setOrderModalVisible] = useState(false);
             borderRadius: 24,
             padding: 10,
             elevation: 5,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 3,
             zIndex: 1000,
           }}
         >
@@ -188,23 +215,19 @@ const [orderModalVisible, setOrderModalVisible] = useState(false);
           </ThemedView>
 
           <ThemedView style={styles.btns}>
-           
-
-<CustomButton
-  text="Add to pending orders"
-  icon={<Feather name="shopping-cart" size={18} color="#333" />}
-  onPress={handlePlaceOrder}
-  style={{ paddingVertical: 24, width: '45%', backgroundColor: theme.pink }}
-  textStyle={{ color: '#333' }}
-/>
-
+            <CustomButton
+              text="Add to pending orders"
+              icon={<Feather name="shopping-cart" size={18} color="#333" />}
+              onPress={handlePlaceOrder}
+              style={{ paddingVertical: 24, width: "45%", backgroundColor: theme.pink }}
+              textStyle={{ color: "#333" }}
+            />
 
             <CustomButton
-  onPress={() => setOrderModalVisible(true)}
-  text="Buy Now"
-  style={{ paddingVertical: 24, width: "45%" }}
-/>
-
+              onPress={() => setOrderModalVisible(true)}
+              text="Buy Now"
+              style={{ paddingVertical: 24, width: "45%" }}
+            />
           </ThemedView>
 
           <CustomOutlineButton
@@ -213,18 +236,52 @@ const [orderModalVisible, setOrderModalVisible] = useState(false);
             onPress={() => alert("Button pressed!")}
             style={styles.bottomOutlineButton}
           />
+
+          {filteredProducts.length > 0 && (
+            <>
+              <ThemedText
+                style={{
+                  fontSize: 18,
+                  fontWeight: "600",
+                  marginTop: 30,
+                  marginBottom: 10,
+                }}
+              >
+                Related Products
+              </ThemedText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {filteredProducts
+                  .filter((p:any) => p.id !== product.id)
+                  .map((item:any) => (
+                    <TouchableOpacity
+                      key={item.id}
+                      onPress={() => router.push(`/product/${item.id}`)}
+                      style={{ marginRight: 16 }}
+                    >
+                      <Image
+                        source={{ uri: item.main_image_url }}
+                        style={{ width: 120, height: 120, borderRadius: 8 }}
+                      />
+                      <ThemedText numberOfLines={1}>{item.name}</ThemedText>
+                      <ThemedText>₦{item.price}</ThemedText>
+                    </TouchableOpacity>
+                  ))}
+              </ScrollView>
+            </>
+          )}
         </ScrollView>
       </View>
-      <OrderModal
-  product={product}
-  visible={orderModalVisible}
-  onClose={() => setOrderModalVisible(false)}
-   outlet={activeOutlet}
-/>
 
+      <OrderModal
+        product={product}
+        visible={orderModalVisible}
+        onClose={() => setOrderModalVisible(false)}
+        outlet={activeOutlet}
+      />
     </Layout>
   );
 }
+
 
 
 const styles = StyleSheet.create({

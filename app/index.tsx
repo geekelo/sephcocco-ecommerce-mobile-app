@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Image } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useEffect, useRef } from "react";
+import { View, Text, StyleSheet, Animated } from "react-native";
+import { useRouter } from "expo-router";
 
 const SplashScreen = () => {
   const spinAnim = useRef(new Animated.Value(0)).current;
@@ -18,7 +18,7 @@ const SplashScreen = () => {
 
     // Navigate after 6 seconds
     const timeout = setTimeout(() => {
-      router.replace('/storeSelection');
+      router.replace("/storeSelection");
     }, 6000);
 
     return () => clearTimeout(timeout);
@@ -26,13 +26,13 @@ const SplashScreen = () => {
 
   const spin = spinAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
+    outputRange: ["0deg", "360deg"],
   });
 
   return (
     <View style={styles.container}>
       <Animated.Image
-        source={require('@/assets/images/logo.png')} // Your logo image
+        source={require("@/assets/images/logo.png")}
         style={[styles.logo, { transform: [{ rotate: spin }] }]}
       />
       <Text style={styles.logoText}>Sephcocco...</Text>
@@ -45,9 +45,9 @@ export default SplashScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
   },
   logo: {
     width: 100,
@@ -55,8 +55,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logoText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });

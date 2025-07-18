@@ -127,21 +127,19 @@ const handleDelete = () => {
   });
 };
 
-// const getImageSource = () => {
-//   const uri = order?.products?.[0]?.main_image_url;
+const getImageSource = () => {
+  const uri = order?.products?.[0]?.main_image_url;
 
-//   // ✅ Only return if it's a valid HTTP(S) string
-//   if (
-//     typeof uri === 'string' &&
-//     uri.trim() !== '' &&
-//     (uri.startsWith('http://') || uri.startsWith('https://'))
-//   ) {
-//     return { uri };
-//   }
+  if (
+    typeof uri === 'string' &&
+    uri.trim() !== '' &&
+    (uri.startsWith('http://') || uri.startsWith('https://'))
+  ) {
+    return { uri };
+  }
 
-//   // ✅ fallback image (e.g. local asset)
-//   return require('@/assets/images/logo.png');
-// };
+  return require('@/assets/images/logo.png');
+};
 
 
 
@@ -156,13 +154,13 @@ console.log('orders', order)
       ]}
     >
       <View style={styles.imageContainer}>
- {/* <Image
+ <Image
   source={getImageSource()}
   style={styles.image}
   onError={() => console.warn("🖼️ Image failed to load")}
-/> */}
+/> 
 
-  {/* <View style={styles.checkboxContainer}>
+  <View style={styles.checkboxContainer}>
    <TouchableOpacity
   onPress={toggleCheckbox}
   style={[
@@ -173,7 +171,7 @@ console.log('orders', order)
   {isSelected && <Text style={styles.fakeCheckmark}>✓</Text>}
 </TouchableOpacity>
 
-  </View> */}
+  </View>
 
   <TouchableOpacity
   onPress={toggleCheckbox}

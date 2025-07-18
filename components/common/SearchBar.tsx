@@ -26,6 +26,7 @@ interface SearchBarProps {
 }
 
 const primaryFilters = [
+  
   'Price: Low to High',
   'Price: High to Low',
   'Newest First',

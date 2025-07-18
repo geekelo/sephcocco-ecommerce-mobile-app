@@ -3,7 +3,7 @@ import ProductList from "@/components/home/NewlyProductList";
 import TopSeller from "@/components/home/TopSeller";
 import { Layout } from "@/components/layout/Layout";
 import { useOutlet } from "@/context/outletContext";
-import { useAuth } from "@/context/authContext"; // ⬅️ assumed auth context
+import { useAuth } from "@/context/authContext";
 import { router } from "expo-router";
 import { Text } from "react-native";
 import { Routes } from "@/routes";
@@ -13,7 +13,7 @@ export default function PharmacyPage() {
   const { user } = useAuth();
 
   const isLoggedIn = !!user;
-  const userId = user?.id ?? null; // ✅ extract userId safely
+  const userId = user?.id ?? null;
 
   const handleLoginPrompt = () => {
     router.push(Routes.auth.login);
@@ -32,15 +32,10 @@ export default function PharmacyPage() {
           <ProductList
             outlet="pharmacy"
             isLoggedIn={isLoggedIn}
-            userId={userId} // ✅ pass userId
+            userId={userId}
             onLoginPrompt={handleLoginPrompt}
           />
-          <TopSeller
-            outlet="pharmacy"
-            isLoggedIn={isLoggedIn}
-           
-            onLoginPrompt={handleLoginPrompt}
-          />
+         
         </>
       )}
     </Layout>

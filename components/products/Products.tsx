@@ -27,6 +27,8 @@ export default function Products() {
   const theme = Colors[colorScheme ?? "light"];
   const { width } = useWindowDimensions();
   const { activeOutlet } = useOutlet();
+const [searchQuery, setSearchQuery] = useState("");
+const [sortOption, setSortOption] = useState<string | null>(null);
 
   const [userId, setUserId] = useState<string | null>(null);
   const [isUserLoaded, setIsUserLoaded] = useState(false);
@@ -67,6 +69,31 @@ const unlikeMutation = useUnlikeProduct(activeOutlet ?? "");
     }
   };
 
+
+  
+const filteredProducts = products
+  ?.filter((item: any) =>
+    item.title.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+  .filter((item: any) =>
+    selectedCategory ? item.category === selectedCategory : true
+  )
+  .sort((a: any, b: any) => {
+    if (sortOption === "Price: Low to High") {
+      return a.price - b.price;
+    } else if (sortOption === "Price: High to Low") {
+      return b.price - a.price;
+    } else if (sortOption === "Newest First") {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(); // fallback if createdAt exists
+    } else if (sortOption === "A–Z") {
+      return a.title.localeCompare(b.title);
+    } else if (sortOption === "Z–A") {
+      return b.title.localeCompare(a.title);
+    }
+    return 0;
+  });
+
+
   const numColumns = width > 768 ? 3 : width > 480 ? 2 : 1;
   const cardWidth = (width - 60 - (numColumns - 1) * 16) / numColumns;
 
@@ -97,16 +124,17 @@ const unlikeMutation = useUnlikeProduct(activeOutlet ?? "");
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-     <SearchBar
+    <SearchBar
   onFilterToggle={toggleFilter}
   filterOpen={filterOpen}
-  onFilterSelect={handleFilterSelect}
-  onCategorySelect={setSelectedCategory}
-  onSearchChange={(text) => {
-    // Optional: live search filtering logic
-    console.log("Search text:", text);
+  onFilterSelect={(filter) => {
+    setSelectedFilter(filter);
+    setSortOption(filter); // store sort type
   }}
+  onCategorySelect={setSelectedCategory}
+  onSearchChange={setSearchQuery}
 />
+
 
 
       {selectedFilter === "Categories" && (

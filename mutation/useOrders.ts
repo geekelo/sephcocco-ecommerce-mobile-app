@@ -87,7 +87,7 @@ export const useUpdateOrder = (outlet: string) => {
 
   return useMutation({
     mutationFn: (payload: {
-      id: string | number;
+      id: any;
       user_id: string;
       product_id?: string;
       quantity?: number;
