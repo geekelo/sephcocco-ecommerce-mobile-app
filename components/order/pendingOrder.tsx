@@ -84,26 +84,26 @@ const similarDiscountProducts: SimilarProduct[] =
 const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
   const product = item.product || {};
 
-  // const mainImageUrl =
-  //   typeof product.main_image_url === "string" &&
-  //   product.main_image_url.startsWith("http")
-  //     ? product.main_image_url
-  //     : undefined;
+  const mainImageUrl =
+    typeof product.main_image_url === "string" &&
+    product.main_image_url.startsWith("http")
+      ? product.main_image_url
+      : undefined;
 
   const transformedOrder = {
     ...item,
     name: product.name,
     price: parseFloat(item.unit_price),
-    // image: mainImageUrl
-    //   ? { uri: mainImageUrl }
-    //   : require("@/assets/images/logo.png"),
+    image: mainImageUrl
+      ? { uri: mainImageUrl }
+      : require("@/assets/images/logo.png"),
     products: [
       {
         id: product.id,
         name: product.name,
         price: parseFloat(item.unit_price),
         quantity: item.quantity,
-        // main_image_url: mainImageUrl,
+        main_image_url: mainImageUrl,
       },
     ],
   };
@@ -220,16 +220,7 @@ const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
         </View>
       )}
 
-      {/* Similar Discounts */}
-      {/* {similarDiscountProducts.length > 0 && (
-        <View style={styles.similarDiscountsContainer}>
-          <SimilarProducts
-            similar={similarDiscountProducts}
-            onProductPress={(id) => navigation.navigate("product", { id })}
-            title="Similar Discounts"
-          />
-        </View>
-      )} */}
+    
 
       {/* Order Modal */}
       <Modal

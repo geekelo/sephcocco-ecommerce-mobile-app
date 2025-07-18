@@ -8,6 +8,7 @@ import { Layout } from '@/components/layout/Layout';
 
 
 import {  useNavigation } from "expo-router";
+import { Colors } from '@/constants/Colors';
 const sampleMessages = [
     {
     id: '1',
@@ -110,7 +111,7 @@ export default function MessageScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.light.background,
   },
 
   header: {
