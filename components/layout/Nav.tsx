@@ -166,7 +166,7 @@ const handleLogout = async () => {
           </Link>
 
           <Link
-            href="/message"
+            href="/mainMessage"
             style={[styles.sidebarText, { color: theme.text, borderBottomColor: theme.border }]}
             asChild
           >
