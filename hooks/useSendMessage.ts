@@ -65,15 +65,42 @@ interface ActionCableSubscription {
   confirmed: boolean;
 }
 
+// Singleton instance tracker to prevent multiple connections
+let activeInstance: string | null = null;
+
 export const useMessaging = (
   authToken: string, 
   outletType: string = '', 
   userData?: User
 ): MessagingHookReturn => {
+  const instanceId = useRef(`instance-${Date.now()}-${Math.random()}`);
+  
   console.log('🚀 useMessaging (TypeScript) hook initialized');
+  console.log('🆔 Instance ID:', instanceId.current);
   console.log('🔑 Auth token:', !!authToken);
   console.log('🏪 Outlet type:', outletType);
   console.log('👤 User data:', userData);
+  
+  // Check if this should be the active instance
+  useEffect(() => {
+    if (!activeInstance) {
+      activeInstance = instanceId.current;
+      console.log('✅ This instance is now active:', instanceId.current);
+    } else if (activeInstance !== instanceId.current) {
+      console.log('⚠️ Another instance is already active:', activeInstance);
+      console.log('⚠️ This instance will be passive:', instanceId.current);
+    }
+    
+    return () => {
+      if (activeInstance === instanceId.current) {
+        activeInstance = null;
+        console.log('🧹 Active instance cleaned up:', instanceId.current);
+      }
+    };
+  }, []);
+  
+  // Only allow the active instance to connect
+  const isActiveInstance = activeInstance === instanceId.current;
   
   // Refs
   const wsRef = useRef<WebSocket | null>(null);
@@ -338,7 +365,18 @@ export const useMessaging = (
 
   // Connect to WebSocket with ActionCable protocol
   const connect = useCallback(() => {
+    console.log('🔐 Connect function called');
+    console.log('🔐 Current state:', {
+      hasAuthToken: !!authToken,
+      hasOutletType: !!outletType,
+      connectionAttempted: connectionAttemptedRef.current,
+      isConnecting,
+      isConnected,
+      hasExistingWs: !!wsRef.current
+    });
+
     if (!authToken || !outletType) {
+      console.log('❌ Missing auth token or outlet type');
       setConnectionError('Missing auth token or outlet type');
       return;
     }
@@ -349,15 +387,29 @@ export const useMessaging = (
     }
 
     if (wsRef.current) {
+      console.log('🔐 Existing WebSocket found, cleaning up first...');
       cleanup();
+      // Wait a bit after cleanup before reconnecting
+      setTimeout(() => {
+        if (!connectionAttemptedRef.current) {
+          connectionAttemptedRef.current = true;
+          startConnection();
+        }
+      }, 100);
+      return;
     }
 
     connectionAttemptedRef.current = true;
+    startConnection();
+  }, [authToken, outletType]); // Removed isConnecting, isConnected from dependencies
+
+  // Separate function to actually start the connection
+  const startConnection = useCallback(() => {
     setIsConnecting(true);
     setConnectionError(null);
     messagesLoadedRef.current = false;
 
-    console.log('🔐 Attempting to connect...');
+    console.log('🔐 Starting WebSocket connection...');
 
     try {
       const wsUrl = `wss://sephcocco-lounge-api.onrender.com/cable?token=${encodeURIComponent(authToken)}`;
@@ -409,9 +461,12 @@ export const useMessaging = (
         if (event.code !== 1000 && authToken && outletType) {
           console.log('🔄 Reconnecting in 3 seconds...');
           reconnectTimeoutRef.current = setTimeout(() => {
-            if (!isConnected && !isConnecting) {
-              connectionAttemptedRef.current = false;
+            if (!isConnected && !isConnecting && !connectionAttemptedRef.current) {
+              console.log('🔄 Attempting reconnection...');
+              connectionAttemptedRef.current = false; // Reset flag for reconnection
               connect();
+            } else {
+              console.log('🔄 Skipping reconnection - already connected or connecting');
             }
           }, 3000);
         }
@@ -431,7 +486,7 @@ export const useMessaging = (
       setIsConnecting(false);
       connectionAttemptedRef.current = false;
     }
-  }, [authToken, outletType, handleMessage, cleanup, isConnected, isConnecting]);
+  }, [authToken, outletType, handleMessage]);
 
   // Load messages (like web version)
   const loadMessages = useCallback(() => {
@@ -577,20 +632,42 @@ export const useMessaging = (
 
   // Auto-connect
   useEffect(() => {
+    if (!isActiveInstance) {
+      console.log('⏭️ Skipping auto-connect - not active instance');
+      return;
+    }
+    
     console.log('🔌 Auto-connect useEffect triggered');
+    console.log('🔌 Current state:', { 
+      hasAuthToken: !!authToken, 
+      hasOutletType: !!outletType, 
+      autoConnectAttempted: autoConnectAttemptedRef.current,
+      isConnected, 
+      isConnecting 
+    });
     
     if (authToken && outletType && !autoConnectAttemptedRef.current && !isConnected && !isConnecting) {
       console.log('🚀 Auto-connecting to WebSocket...');
       autoConnectAttemptedRef.current = true;
       connect();
+    } else {
+      console.log('⏭️ Skipping auto-connect - conditions not met');
     }
 
     return () => {
-      console.log('🧹 Cleaning up WebSocket connection...');
+      console.log('🧹 Auto-connect cleanup triggered');
+      // Don't cleanup here - only on unmount or auth change
+    };
+  }, [authToken, outletType, isActiveInstance]); // Added isActiveInstance
+
+  // Cleanup only on unmount or when auth/outlet changes
+  useEffect(() => {
+    return () => {
+      console.log('🧹 Component unmounting - cleaning up WebSocket connection...');
       cleanup();
       autoConnectAttemptedRef.current = false;
     };
-  }, [authToken, outletType, connect, cleanup, isConnected, isConnecting]);
+  }, []); // Empty dependency array - only run on mount/unmount
 
   // Combine messages for display
   const allMessages = [...messages, ...optimisticMessages].sort((a, b) => 
