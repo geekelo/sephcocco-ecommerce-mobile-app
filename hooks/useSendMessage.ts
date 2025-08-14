@@ -160,6 +160,20 @@ export const useMessaging = (
       const data: WebSocketMessage = JSON.parse(event.data);
       console.log('📨 Raw WebSocket message received:', data);
 
+      // Handle ping messages from Rails backend
+      if (data.type === 'ping') {
+        console.log('🏓 Ping received from server, responding with pong');
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          const pongResponse = {
+            type: 'pong',
+            message: data.message // Echo back the ping message
+          };
+          wsRef.current.send(JSON.stringify(pongResponse));
+          console.log('🏓 Pong sent:', pongResponse);
+        }
+        return;
+      }
+
       // Handle ActionCable welcome message
       if (data.type === 'welcome') {
         console.log('🎉 ActionCable welcome received');
@@ -296,6 +310,12 @@ export const useMessaging = (
         }
 
         // Handle ping/pong
+        if (messageData.type === 'ping') {
+          console.log('🏓 ActionCable ping received, responding with pong');
+          sendActionCableMessage('pong', { message: messageData.message });
+          return;
+        }
+
         if (messageData.type === 'pong') {
           console.log('🏓 Pong response received - connection is working!');
           return;
@@ -345,6 +365,8 @@ export const useMessaging = (
 
       wsRef.current.onopen = () => {
         console.log('🎉 WebSocket connection opened');
+        console.log('🔍 WebSocket readyState:', wsRef.current?.readyState);
+        console.log('🔍 WebSocket URL:', wsRef.current?.url);
         
         // Subscribe to messaging channel using ActionCable protocol
         const identifier = JSON.stringify({
@@ -358,6 +380,7 @@ export const useMessaging = (
         };
         
         console.log('📡 Subscribing to channel:', subscribeMessage);
+        console.log('📡 Subscribe message JSON:', JSON.stringify(subscribeMessage));
         wsRef.current?.send(JSON.stringify(subscribeMessage));
         
         // Store subscription info
@@ -365,6 +388,8 @@ export const useMessaging = (
           identifier: identifier,
           confirmed: false
         };
+        
+        console.log('📡 Subscription stored:', subscriptionRef.current);
       };
 
       wsRef.current.onmessage = handleMessage;
@@ -540,6 +565,16 @@ export const useMessaging = (
     loadMessages();
   }, [loadMessages]);
 
+  // Send a ping to test connection
+  const sendPing = useCallback(() => {
+    console.log('🏓 Sending manual ping...');
+    if (subscriptionRef.current?.confirmed) {
+      sendActionCableMessage('ping', { timestamp: Date.now() });
+    } else {
+      console.log('❌ Cannot send ping: not connected');
+    }
+  }, [sendActionCableMessage]);
+
   // Auto-connect
   useEffect(() => {
     console.log('🔌 Auto-connect useEffect triggered');
@@ -573,6 +608,7 @@ export const useMessaging = (
     sendMessage,
     refreshMessages,
     clearOptimisticMessages,
-    triggerMessageLoad
+    triggerMessageLoad,
+    sendPing // Add ping function for testing
   };
 };
