@@ -38,6 +38,11 @@ interface WebSocketMessage {
   error?: string;
   user?: User;
   sender?: User;
+  thread_owner_id?: string;
+  broadcast?: boolean;
+  identifier?: string;
+  command?: string;
+  data?: any;
 }
 
 interface MessagingHookReturn {
@@ -54,17 +59,29 @@ interface MessagingHookReturn {
   triggerMessageLoad: () => void;
 }
 
+// ActionCable subscription management
+interface ActionCableSubscription {
+  identifier: string;
+  confirmed: boolean;
+}
+
 export const useMessaging = (
   authToken: string, 
   outletType: string = '', 
   userData?: User
 ): MessagingHookReturn => {
-  console.log('🚀 useMessaging hook initialized');
+  console.log('🚀 useMessaging (TypeScript) hook initialized');
+  console.log('🔑 Auth token:', !!authToken);
+  console.log('🏪 Outlet type:', outletType);
+  console.log('👤 User data:', userData);
   
   // Refs
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const messageQueueRef = useRef<string[]>([]);
+  const subscriptionRef = useRef<ActionCableSubscription | null>(null);
+  const messagesLoadedRef = useRef(false);
+  const connectionAttemptedRef = useRef(false);
+  const autoConnectAttemptedRef = useRef(false);
   
   // State
   const [isConnected, setIsConnected] = useState(false);
@@ -81,15 +98,44 @@ export const useMessaging = (
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        hour12: false
       });
     } catch (error) {
       return new Date().toLocaleString();
     }
   };
 
+  // Send message via ActionCable protocol (like web version)
+  const sendActionCableMessage = useCallback((action: string, data: any) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.error('❌ Cannot send message: WebSocket not connected');
+      return false;
+    }
+
+    if (!subscriptionRef.current?.confirmed) {
+      console.error('❌ Cannot send message: Subscription not confirmed');
+      return false;
+    }
+
+    const message = {
+      command: 'message',
+      identifier: subscriptionRef.current.identifier,
+      data: JSON.stringify({
+        action: action,
+        ...data
+      })
+    };
+
+    console.log('📤 Sending ActionCable message:', message);
+    wsRef.current.send(JSON.stringify(message));
+    return true;
+  }, []);
+
   // Clean up connection
   const cleanup = useCallback(() => {
+    console.log('🧹 Cleaning up connection...');
+    
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
@@ -100,20 +146,73 @@ export const useMessaging = (
       wsRef.current = null;
     }
     
+    subscriptionRef.current = null;
+    connectionAttemptedRef.current = false;
+    autoConnectAttemptedRef.current = false;
+    messagesLoadedRef.current = false;
     setIsConnected(false);
     setIsConnecting(false);
   }, []);
 
-  // Handle WebSocket messages
+  // Handle WebSocket messages (ActionCable protocol)
   const handleMessage = useCallback((event: MessageEvent) => {
     try {
       const data: WebSocketMessage = JSON.parse(event.data);
-      console.log('📨 Received:', data.type, data);
+      console.log('📨 Raw WebSocket message received:', data);
 
-      switch (data.type) {
-        case 'user_messages_response':
-          if (data.messages) {
-            const processedMessages = data.messages.map(msg => ({
+      // Handle ActionCable welcome message
+      if (data.type === 'welcome') {
+        console.log('🎉 ActionCable welcome received');
+        return;
+      }
+
+      // Handle subscription confirmation
+      if (data.type === 'confirm_subscription') {
+        console.log('✅ Subscription confirmed:', data.identifier);
+        if (subscriptionRef.current) {
+          subscriptionRef.current.confirmed = true;
+          setIsConnected(true);
+          setIsConnecting(false);
+          setConnectionError(null);
+          
+          // Load messages after subscription is confirmed
+          setTimeout(() => {
+            if (!messagesLoadedRef.current) {
+              console.log('⏰ Loading messages after subscription confirmation...');
+              messagesLoadedRef.current = true;
+              loadMessages();
+            }
+          }, 1000);
+        }
+        return;
+      }
+
+      // Handle subscription rejection
+      if (data.type === 'reject_subscription') {
+        console.error('❌ Subscription rejected');
+        setConnectionError('Subscription rejected - authentication may have failed');
+        setIsConnected(false);
+        setIsConnecting(false);
+        return;
+      }
+
+      // Handle ActionCable data messages
+      if (data.identifier && data.command === 'message' && data.data) {
+        let messageData;
+        try {
+          messageData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+        } catch (e) {
+          messageData = data.data;
+        }
+
+        console.log('📨 ActionCable message data:', messageData);
+
+        // Handle user messages response
+        if (messageData.type === 'user_messages_response') {
+          console.log('📨 User messages response received:', messageData);
+          
+          if (messageData.messages) {
+            const processedMessages = messageData.messages.map((msg: any) => ({
               ...msg,
               display_time: formatDisplayTime(msg.timestamp || msg.created_at)
             }));
@@ -121,62 +220,111 @@ export const useMessaging = (
             console.log('✅ Loaded messages:', processedMessages.length);
           }
           setIsLoading(false);
-          break;
+          return;
+        }
 
-        case 'new_message':
-        case 'broadcast_message':
-          if (data.content) {
+        // Handle real-time new messages
+        if (messageData.type === 'new_message' || 
+            messageData.type === 'broadcast_message' || 
+            messageData.type === 'message_broadcast' || 
+            messageData.type === 'message_updated' ||
+            messageData.type === 'chat_message' ||
+            messageData.broadcast === true) {
+          
+          console.log('🚨 REAL-TIME: New message received!', messageData);
+
+          if (messageData.content) {
+            const currentTimestamp = messageData.created_at || messageData.timestamp || new Date().toISOString();
+            const senderId = messageData.sender_id || messageData.user?.id || messageData.user_id;
+            const threadOwnerId = messageData.thread_owner_id || messageData.user_id || senderId;
+            const isFromCurrentUser = userData && String(senderId) === String(userData.id);
+
             const newMessage: Message = {
-              id: data.id || `msg-${Date.now()}`,
-              content: data.content,
-              message_type: data.message_type || 'text',
-              user_id: data.user_id || data.sender?.id || '',
-              user_name: data.user_name || data.sender?.name || data.user?.name || 'Support',
-              user_email: data.user_email || data.sender?.email || data.user?.email || '',
-              user_role: data.user_role || data.sender?.role || data.user?.role || 'support',
-              timestamp: data.timestamp || data.created_at || new Date().toISOString(),
-              created_at: data.created_at || data.timestamp || new Date().toISOString(),
-              display_time: formatDisplayTime(data.timestamp || data.created_at || new Date().toISOString())
+              id: messageData.id || `msg-${Date.now()}`,
+              content: messageData.content,
+              message_type: messageData.message_type || 'text',
+              user_id: senderId || '',
+              user_name: isFromCurrentUser ? 'You' : (messageData.user?.name || messageData.sender?.name || messageData.user_name || 'Support'),
+              user_email: messageData.user_email || messageData.sender?.email || messageData.user?.email || '',
+              user_role: messageData.user_role || messageData.sender?.role || messageData.user?.role || 'support',
+              timestamp: currentTimestamp,
+              created_at: currentTimestamp,
+              display_time: formatDisplayTime(currentTimestamp)
             };
 
-            // Remove matching optimistic message if it's from current user
-            if (userData && newMessage.user_id === userData.id) {
-              setOptimisticMessages(prev => 
-                prev.filter(opt => opt.content !== newMessage.content)
-              );
+            // Check if message belongs to current user conversation
+            const isMyConversation = (
+              !threadOwnerId || 
+              (userData && String(threadOwnerId) === String(userData.id)) ||
+              isFromCurrentUser ||
+              messageData.broadcast === true ||
+              (userData && String(messageData.user_id) === String(userData.id))
+            );
+
+            console.log('🔍 Message belongs to current user:', isMyConversation);
+
+            if (isMyConversation) {
+              // Remove matching optimistic message if it's from current user
+              if (isFromCurrentUser) {
+                console.log('🔄 Removing matching optimistic message');
+                setOptimisticMessages(prev => 
+                  prev.filter(opt => opt.content !== newMessage.content)
+                );
+              }
+
+              // Add to messages if not duplicate
+              setMessages(prev => {
+                const exists = prev.some(msg => 
+                  msg.id === newMessage.id || 
+                  (msg.content === newMessage.content && 
+                   Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 1000)
+                );
+                
+                if (exists) {
+                  console.log('⚠️ Duplicate message, skipping');
+                  return prev;
+                }
+                
+                console.log('✅ Adding real-time message');
+                return [...prev, newMessage];
+              });
+            } else {
+              console.log('⚠️ Message not for current user, ignoring');
             }
-
-            // Add to messages if not duplicate
-            setMessages(prev => {
-              const exists = prev.some(msg => 
-                msg.id === newMessage.id || 
-                (msg.content === newMessage.content && 
-                 Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 1000)
-              );
-              
-              if (exists) return prev;
-              return [...prev, newMessage];
-            });
           }
-          break;
+          return;
+        }
 
-        case 'error':
-          console.error('❌ WebSocket error:', data.error);
-          setConnectionError(data.error || 'Unknown error');
-          break;
+        // Handle ping/pong
+        if (messageData.type === 'pong') {
+          console.log('🏓 Pong response received - connection is working!');
+          return;
+        }
 
-        default:
-          console.log('❓ Unknown message type:', data.type);
+        // Handle errors
+        if (messageData.error) {
+          console.error('❌ WebSocket error received:', messageData.error);
+          setConnectionError(messageData.error);
+          return;
+        }
+
+        console.log('❓ Unknown ActionCable message type:', messageData.type);
       }
-    } catch (error) {
-      console.error('❌ Error parsing message:', error);
-    }
-  }, [userData]);
 
-  // Connect to WebSocket
+    } catch (error) {
+      console.error('❌ Error parsing WebSocket message:', error);
+    }
+  }, [userData, sendActionCableMessage]);
+
+  // Connect to WebSocket with ActionCable protocol
   const connect = useCallback(() => {
     if (!authToken || !outletType) {
       setConnectionError('Missing auth token or outlet type');
+      return;
+    }
+
+    if (connectionAttemptedRef.current || isConnecting || isConnected) {
+      console.log('🔐 Connection already attempted or in progress, skipping...');
       return;
     }
 
@@ -184,48 +332,63 @@ export const useMessaging = (
       cleanup();
     }
 
+    connectionAttemptedRef.current = true;
     setIsConnecting(true);
     setConnectionError(null);
+    messagesLoadedRef.current = false;
+
+    console.log('🔐 Attempting to connect...');
 
     try {
       const wsUrl = `wss://sephcocco-lounge-api.onrender.com/cable?token=${encodeURIComponent(authToken)}`;
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log('🎉 Connected to WebSocket');
+        console.log('🎉 WebSocket connection opened');
         
-        // Subscribe to messaging channel
+        // Subscribe to messaging channel using ActionCable protocol
+        const identifier = JSON.stringify({
+          channel: 'MessagingChannel',
+          outlet_type: outletType
+        });
+        
         const subscribeMessage = {
           command: 'subscribe',
-          identifier: JSON.stringify({
-            channel: 'MessagingChannel',
-            outlet_type: outletType
-          })
+          identifier: identifier
         };
         
+        console.log('📡 Subscribing to channel:', subscribeMessage);
         wsRef.current?.send(JSON.stringify(subscribeMessage));
         
-        setIsConnected(true);
-        setIsConnecting(false);
-        setConnectionError(null);
-        
-        // Load messages after connection
-        setTimeout(() => {
-          loadMessages();
-        }, 1000);
+        // Store subscription info
+        subscriptionRef.current = {
+          identifier: identifier,
+          confirmed: false
+        };
       };
 
       wsRef.current.onmessage = handleMessage;
 
       wsRef.current.onclose = (event) => {
-        console.log('💔 WebSocket closed:', event.code);
+        console.log('💔 WebSocket closed:', event.code, event.reason);
         setIsConnected(false);
         setIsConnecting(false);
+        connectionAttemptedRef.current = false;
+        messagesLoadedRef.current = false;
+        
+        if (subscriptionRef.current) {
+          subscriptionRef.current.confirmed = false;
+        }
         
         // Auto-reconnect if not intentionally closed
-        if (event.code !== 1000 && authToken) {
+        if (event.code !== 1000 && authToken && outletType) {
           console.log('🔄 Reconnecting in 3 seconds...');
-          reconnectTimeoutRef.current = setTimeout(connect, 3000);
+          reconnectTimeoutRef.current = setTimeout(() => {
+            if (!isConnected && !isConnecting) {
+              connectionAttemptedRef.current = false;
+              connect();
+            }
+          }, 3000);
         }
       };
 
@@ -234,32 +397,36 @@ export const useMessaging = (
         setConnectionError('Connection failed');
         setIsConnected(false);
         setIsConnecting(false);
+        connectionAttemptedRef.current = false;
       };
 
     } catch (error) {
       console.error('❌ Failed to create WebSocket:', error);
       setConnectionError('Failed to create connection');
       setIsConnecting(false);
+      connectionAttemptedRef.current = false;
     }
-  }, [authToken, outletType, handleMessage, cleanup]);
+  }, [authToken, outletType, handleMessage, cleanup, isConnected, isConnecting]);
 
-  // Load messages
+  // Load messages (like web version)
   const loadMessages = useCallback(() => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.log('❌ Cannot load messages: WebSocket not ready');
+    if (!subscriptionRef.current?.confirmed) {
+      console.log('❌ Cannot load messages: Subscription not confirmed');
       return;
     }
 
-    console.log('📤 Loading messages...');
+    console.log('📤 Loading user messages...');
     setIsLoading(true);
 
-    const requestData = {
-      action: 'request_my_messages',
+    const success = sendActionCableMessage('request_my_messages', {
       outlet_type: outletType,
       _function: 'loadUserMessages'
-    };
+    });
 
-    wsRef.current.send(JSON.stringify(requestData));
+    if (!success) {
+      setIsLoading(false);
+      return;
+    }
     
     // Timeout if no response
     setTimeout(() => {
@@ -268,15 +435,15 @@ export const useMessaging = (
         console.log('⏰ Load messages timeout');
       }
     }, 10000);
-  }, [outletType, isLoading]);
+  }, [outletType, isLoading, sendActionCableMessage]);
 
-  // Send message
+  // Send message (like web version)
   const sendMessage = useCallback(async (content: string, messageType: string = 'text'): Promise<void> => {
     if (!content.trim()) {
       throw new Error('Message cannot be empty');
     }
 
-    if (!wsRef.current || !isConnected) {
+    if (!subscriptionRef.current?.confirmed) {
       throw new Error('Not connected to WebSocket');
     }
 
@@ -303,11 +470,12 @@ export const useMessaging = (
     };
 
     // Add optimistic message
+    console.log('📤 Adding optimistic message:', optimisticMessage);
     setOptimisticMessages(prev => [...prev, optimisticMessage]);
 
     try {
-      const messageData = {
-        action: 'receive',
+      // Send message using ActionCable protocol (like web version)
+      const success = sendActionCableMessage('receive', {
         message: {
           content: content,
           message_type: messageType,
@@ -319,32 +487,47 @@ export const useMessaging = (
         },
         outlet_type: outletType,
         _function: 'sendMessage'
-      };
+      });
 
-      wsRef.current.send(JSON.stringify(messageData));
-      console.log('✅ Message sent');
+      if (!success) {
+        throw new Error('Failed to send message');
+      }
+
+      console.log('✅ Message sent successfully');
 
       // Remove optimistic message after timeout if not confirmed
       setTimeout(() => {
         setOptimisticMessages(prev => {
           const stillExists = prev.find(msg => msg.id === messageId);
           if (stillExists) {
+            console.log('⏰ Converting optimistic message to permanent');
             // Convert to permanent message
-            setMessages(current => [...current, { ...stillExists, optimistic: false }]);
+            setMessages(current => {
+              const alreadyExists = current.find(msg => 
+                msg.content === stillExists.content && 
+                Math.abs(new Date(msg.timestamp).getTime() - new Date(stillExists.timestamp).getTime()) < 10000
+              );
+              if (!alreadyExists) {
+                return [...current, { ...stillExists, optimistic: false }];
+              }
+              return current;
+            });
           }
           return prev.filter(msg => msg.id !== messageId);
         });
-      }, 5000);
+      }, 8000);
 
     } catch (error) {
       // Remove optimistic message on error
       setOptimisticMessages(prev => prev.filter(msg => msg.id !== messageId));
+      console.error('❌ Error sending message:', error);
       throw error;
     }
-  }, [isConnected, userData, outletType]);
+  }, [userData, outletType, sendActionCableMessage]);
 
   // Public functions
   const refreshMessages = useCallback(async () => {
+    messagesLoadedRef.current = false;
     loadMessages();
   }, [loadMessages]);
 
@@ -353,17 +536,26 @@ export const useMessaging = (
   }, []);
 
   const triggerMessageLoad = useCallback(() => {
+    console.log('🔄 Manually triggering message load...');
     loadMessages();
   }, [loadMessages]);
 
   // Auto-connect
   useEffect(() => {
-    if (authToken && outletType) {
+    console.log('🔌 Auto-connect useEffect triggered');
+    
+    if (authToken && outletType && !autoConnectAttemptedRef.current && !isConnected && !isConnecting) {
+      console.log('🚀 Auto-connecting to WebSocket...');
+      autoConnectAttemptedRef.current = true;
       connect();
     }
 
-    return cleanup;
-  }, [authToken, outletType, connect, cleanup]);
+    return () => {
+      console.log('🧹 Cleaning up WebSocket connection...');
+      cleanup();
+      autoConnectAttemptedRef.current = false;
+    };
+  }, [authToken, outletType, connect, cleanup, isConnected, isConnecting]);
 
   // Combine messages for display
   const allMessages = [...messages, ...optimisticMessages].sort((a, b) => 
