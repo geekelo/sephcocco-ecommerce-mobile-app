@@ -204,6 +204,13 @@ export const useMessaging = (
       // Handle ActionCable welcome message
       if (data.type === 'welcome') {
         console.log('🎉 ActionCable welcome received');
+        console.log('🎉 Welcome data:', data);
+        
+        // Now subscribe to the channel
+        setTimeout(() => {
+          console.log('📡 Subscribing after welcome...');
+          subscribeToChannel();
+        }, 500);
         return;
       }
 
@@ -420,28 +427,16 @@ export const useMessaging = (
         console.log('🔍 WebSocket readyState:', wsRef.current?.readyState);
         console.log('🔍 WebSocket URL:', wsRef.current?.url);
         
-        // Subscribe to messaging channel using ActionCable protocol
-        const identifier = JSON.stringify({
-          channel: 'MessagingChannel',
-          outlet_type: outletType
-        });
+        // Wait for welcome message before subscribing
+        console.log('⏳ Waiting for ActionCable welcome message...');
         
-        const subscribeMessage = {
-          command: 'subscribe',
-          identifier: identifier
-        };
-        
-        console.log('📡 Subscribing to channel:', subscribeMessage);
-        console.log('📡 Subscribe message JSON:', JSON.stringify(subscribeMessage));
-        wsRef.current?.send(JSON.stringify(subscribeMessage));
-        
-        // Store subscription info
-        subscriptionRef.current = {
-          identifier: identifier,
-          confirmed: false
-        };
-        
-        console.log('📡 Subscription stored:', subscriptionRef.current);
+        // Set a timeout to subscribe if we don't get welcome message
+        setTimeout(() => {
+          if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            console.log('⏰ Timeout reached, subscribing anyway...');
+            subscribeToChannel();
+          }
+        }, 2000);
       };
 
       wsRef.current.onmessage = handleMessage;
@@ -487,6 +482,37 @@ export const useMessaging = (
       connectionAttemptedRef.current = false;
     }
   }, [authToken, outletType, handleMessage]);
+
+  // Separate function to handle channel subscription
+  const subscribeToChannel = useCallback(() => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.log('❌ Cannot subscribe: WebSocket not ready');
+      return;
+    }
+    
+    // Subscribe to messaging channel using ActionCable protocol
+    const identifier = JSON.stringify({
+      channel: 'MessagingChannel',
+      outlet_type: outletType
+    });
+    
+    const subscribeMessage = {
+      command: 'subscribe',
+      identifier: identifier
+    };
+    
+    console.log('📡 Subscribing to channel:', subscribeMessage);
+    console.log('📡 Subscribe message JSON:', JSON.stringify(subscribeMessage));
+    wsRef.current.send(JSON.stringify(subscribeMessage));
+    
+    // Store subscription info
+    subscriptionRef.current = {
+      identifier: identifier,
+      confirmed: false
+    };
+    
+    console.log('📡 Subscription stored:', subscriptionRef.current);
+  }, [outletType]);
 
   // Load messages (like web version)
   const loadMessages = useCallback(() => {
