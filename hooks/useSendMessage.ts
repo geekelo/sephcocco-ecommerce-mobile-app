@@ -217,11 +217,15 @@ export const useMessaging = (
       // Handle subscription confirmation
       if (data.type === 'confirm_subscription') {
         console.log('✅ Subscription confirmed:', data.identifier);
-        if (subscriptionRef.current) {
+        console.log('✅ Subscription data:', data);
+        
+        if (subscriptionRef.current && data.identifier === subscriptionRef.current.identifier) {
           subscriptionRef.current.confirmed = true;
           setIsConnected(true);
           setIsConnecting(false);
           setConnectionError(null);
+          
+          console.log('✅ Subscription confirmed and connection state updated');
           
           // Load messages after subscription is confirmed
           setTimeout(() => {
@@ -231,6 +235,11 @@ export const useMessaging = (
               loadMessages();
             }
           }, 1000);
+        } else {
+          console.log('⚠️ Subscription confirmation mismatch:', {
+            received: data.identifier,
+            expected: subscriptionRef.current?.identifier
+          });
         }
         return;
       }
@@ -426,17 +435,34 @@ export const useMessaging = (
         console.log('🎉 WebSocket connection opened');
         console.log('🔍 WebSocket readyState:', wsRef.current?.readyState);
         console.log('🔍 WebSocket URL:', wsRef.current?.url);
+        console.log('🔍 WebSocket protocol:', wsRef.current?.protocol);
+        console.log('🔍 WebSocket extensions:', wsRef.current?.extensions);
         
-        // Wait for welcome message before subscribing
+        // ActionCable should send a welcome message automatically
+        // If we don't get it within 3 seconds, try subscribing anyway
         console.log('⏳ Waiting for ActionCable welcome message...');
         
-        // Set a timeout to subscribe if we don't get welcome message
+        // Try subscribing immediately as fallback
         setTimeout(() => {
-          if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            console.log('⏰ Timeout reached, subscribing anyway...');
+          console.log('⏰ 1 second timeout - trying immediate subscription...');
+          subscribeToChannel();
+        }, 1000);
+        
+        // Try again if still no response
+        setTimeout(() => {
+          if (!subscriptionRef.current?.confirmed) {
+            console.log('⏰ 3 seconds timeout - no subscription confirmed, retrying...');
             subscribeToChannel();
           }
-        }, 2000);
+        }, 3000);
+        
+        // Final attempt with different format
+        setTimeout(() => {
+          if (!subscriptionRef.current?.confirmed) {
+            console.log('⏰ 5 seconds timeout - trying alternative subscription format...');
+            tryAlternativeSubscription();
+          }
+        }, 5000);
       };
 
       wsRef.current.onmessage = handleMessage;
@@ -656,6 +682,25 @@ export const useMessaging = (
     }
   }, [sendActionCableMessage]);
 
+  // Manual subscription for testing
+  const manualSubscribe = useCallback(() => {
+    console.log('🔧 Manual subscription triggered');
+    subscribeToChannel();
+  }, [subscribeToChannel]);
+
+  // Get connection status info
+  const getConnectionInfo = useCallback(() => {
+    return {
+      wsState: wsRef.current?.readyState,
+      wsUrl: wsRef.current?.url,
+      subscriptionIdentifier: subscriptionRef.current?.identifier,
+      subscriptionConfirmed: subscriptionRef.current?.confirmed,
+      isActiveInstance,
+      connectionAttempted: connectionAttemptedRef.current,
+      messagesLoaded: messagesLoadedRef.current
+    };
+  }, [isActiveInstance]);
+
   // Auto-connect
   useEffect(() => {
     if (!isActiveInstance) {
@@ -712,6 +757,8 @@ export const useMessaging = (
     refreshMessages,
     clearOptimisticMessages,
     triggerMessageLoad,
-    sendPing // Add ping function for testing
+    sendPing, // Add ping function for testing
+    manualSubscribe, // Add manual subscription for testing
+    getConnectionInfo // Add connection info for debugging
   };
 };
