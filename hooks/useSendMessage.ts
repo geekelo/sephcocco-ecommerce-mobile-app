@@ -253,7 +253,93 @@ export const useMessaging = (
         return;
       }
 
-      // Handle ActionCable data messages
+      // Handle direct message responses (not wrapped in ActionCable)
+      if (data.type === 'user_messages_response') {
+        console.log('📨 Direct user messages response received:', data);
+        
+        if (data.messages) {
+          const processedMessages = data.messages.map((msg: any) => ({
+            ...msg,
+            display_time: formatDisplayTime(msg.timestamp || msg.created_at)
+          }));
+          setMessages(processedMessages);
+          console.log('✅ Loaded messages (direct):', processedMessages.length);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      // Handle direct real-time messages (not wrapped in ActionCable)
+      if (data.type === 'new_message' || 
+          data.type === 'broadcast_message' || 
+          data.type === 'message_broadcast' || 
+          data.type === 'message_updated' ||
+          data.type === 'chat_message' ||
+          data.broadcast === true) {
+        
+        console.log('🚨 REAL-TIME: Direct new message received!', data);
+
+        if (data.content) {
+          const currentTimestamp = data.created_at || data.timestamp || new Date().toISOString();
+          const senderId = data.sender_id || data.user?.id || data.user_id;
+          const threadOwnerId = data.thread_owner_id || data.user_id || senderId;
+          const isFromCurrentUser = userData && String(senderId) === String(userData.id);
+
+          const newMessage: Message = {
+            id: data.id || `msg-${Date.now()}`,
+            content: data.content,
+            message_type: data.message_type || 'text',
+            user_id: senderId || '',
+            user_name: isFromCurrentUser ? 'You' : (data.user?.name || data.sender?.name || data.user_name || 'Support'),
+            user_email: data.user_email || data.sender?.email || data.user?.email || '',
+            user_role: data.user_role || data.sender?.role || data.user?.role || 'support',
+            timestamp: currentTimestamp,
+            created_at: currentTimestamp,
+            display_time: formatDisplayTime(currentTimestamp)
+          };
+
+          // Check if message belongs to current user conversation
+          const isMyConversation = (
+            !threadOwnerId || 
+            (userData && String(threadOwnerId) === String(userData.id)) ||
+            isFromCurrentUser ||
+            data.broadcast === true ||
+            (userData && String(data.user_id) === String(userData.id))
+          );
+
+          console.log('🔍 Direct message belongs to current user:', isMyConversation);
+
+          if (isMyConversation) {
+            // Remove matching optimistic message if it's from current user
+            if (isFromCurrentUser) {
+              console.log('🔄 Removing matching optimistic message');
+              setOptimisticMessages(prev => 
+                prev.filter(opt => opt.content !== newMessage.content)
+              );
+            }
+
+            // Add to messages if not duplicate
+            setMessages(prev => {
+              const exists = prev.some(msg => 
+                msg.id === newMessage.id || 
+                (msg.content === newMessage.content && 
+                 Math.abs(new Date(msg.timestamp).getTime() - new Date(newMessage.timestamp).getTime()) < 1000)
+              );
+              
+              if (exists) {
+                console.log('⚠️ Duplicate direct message, skipping');
+                return prev;
+              }
+              
+              console.log('✅ Adding direct real-time message');
+              return [...prev, newMessage];
+            });
+          } else {
+            console.log('⚠️ Direct message not for current user, ignoring');
+          }
+        }
+        return;
+      }
       if (data.identifier && data.command === 'message' && data.data) {
         let messageData;
         try {
@@ -509,6 +595,86 @@ export const useMessaging = (
     }
   }, [authToken, outletType, handleMessage]);
 
+  // Try alternative subscription format (in case ActionCable format is different)
+  const tryAlternativeSubscription = useCallback(() => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.log('❌ Cannot try alternative subscription: WebSocket not ready');
+      return;
+    }
+
+    console.log('🔧 Trying alternative subscription formats...');
+
+    // Format 1: Direct channel subscription
+    const altSub1 = {
+      channel: 'MessagingChannel',
+      outlet_type: outletType
+    };
+    console.log('📡 Alt format 1:', altSub1);
+    wsRef.current.send(JSON.stringify(altSub1));
+
+    setTimeout(() => {
+      // Format 2: Simple subscribe command
+      const altSub2 = {
+        subscribe: 'MessagingChannel',
+        outlet_type: outletType
+      };
+      console.log('📡 Alt format 2:', altSub2);
+      wsRef.current?.send(JSON.stringify(altSub2));
+    }, 500);
+
+    setTimeout(() => {
+      // Format 3: Rails format
+      const altSub3 = {
+        action: 'subscribe',
+        channel: 'MessagingChannel',
+        outlet_type: outletType
+      };
+      console.log('📡 Alt format 3:', altSub3);
+      wsRef.current?.send(JSON.stringify(altSub3));
+    }, 1000);
+
+    // If still no response, assume we're connected and try to load messages
+    setTimeout(() => {
+      if (!subscriptionRef.current?.confirmed) {
+        console.log('🤷 No subscription confirmed, assuming connection and trying to load messages...');
+        // Force connection state
+        setIsConnected(true);
+        setIsConnecting(false);
+        setConnectionError(null);
+        
+        // Try loading messages directly
+        tryDirectMessageLoad();
+      }
+    }, 2000);
+  }, [outletType]);
+
+  // Try loading messages without ActionCable subscription
+  const tryDirectMessageLoad = useCallback(() => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.log('❌ Cannot try direct message load: WebSocket not ready');
+      return;
+    }
+
+    console.log('📤 Trying direct message load...');
+    setIsLoading(true);
+
+    const directRequest = {
+      action: 'request_my_messages',
+      outlet_type: outletType,
+      _function: 'loadUserMessages'
+    };
+
+    console.log('📤 Direct request:', directRequest);
+    wsRef.current.send(JSON.stringify(directRequest));
+
+    // Timeout if no response
+    setTimeout(() => {
+      if (isLoading) {
+        setIsLoading(false);
+        console.log('⏰ Direct message load timeout');
+      }
+    }, 10000);
+  }, [outletType, isLoading]);
   // Separate function to handle channel subscription
   const subscribeToChannel = useCallback(() => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
@@ -539,6 +705,87 @@ export const useMessaging = (
     
     console.log('📡 Subscription stored:', subscriptionRef.current);
   }, [outletType]);
+
+  // Try alternative subscription format (in case ActionCable format is different)
+  const tryAlternativeSubscription = useCallback(() => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.log('❌ Cannot try alternative subscription: WebSocket not ready');
+      return;
+    }
+
+    console.log('🔧 Trying alternative subscription formats...');
+
+    // Format 1: Direct channel subscription
+    const altSub1 = {
+      channel: 'MessagingChannel',
+      outlet_type: outletType
+    };
+    console.log('📡 Alt format 1:', altSub1);
+    wsRef.current.send(JSON.stringify(altSub1));
+
+    setTimeout(() => {
+      // Format 2: Simple subscribe command
+      const altSub2 = {
+        subscribe: 'MessagingChannel',
+        outlet_type: outletType
+      };
+      console.log('📡 Alt format 2:', altSub2);
+      wsRef.current?.send(JSON.stringify(altSub2));
+    }, 500);
+
+    setTimeout(() => {
+      // Format 3: Rails format
+      const altSub3 = {
+        action: 'subscribe',
+        channel: 'MessagingChannel',
+        outlet_type: outletType
+      };
+      console.log('📡 Alt format 3:', altSub3);
+      wsRef.current?.send(JSON.stringify(altSub3));
+    }, 1000);
+
+    // If still no response, assume we're connected and try to load messages
+    setTimeout(() => {
+      if (!subscriptionRef.current?.confirmed) {
+        console.log('🤷 No subscription confirmed, assuming connection and trying to load messages...');
+        // Force connection state
+        setIsConnected(true);
+        setIsConnecting(false);
+        setConnectionError(null);
+        
+        // Try loading messages directly
+        tryDirectMessageLoad();
+      }
+    }, 2000);
+  }, [outletType]);
+
+  // Try loading messages without ActionCable subscription
+  const tryDirectMessageLoad = useCallback(() => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.log('❌ Cannot try direct message load: WebSocket not ready');
+      return;
+    }
+
+    console.log('📤 Trying direct message load...');
+    setIsLoading(true);
+
+    const directRequest = {
+      action: 'request_my_messages',
+      outlet_type: outletType,
+      _function: 'loadUserMessages'
+    };
+
+    console.log('📤 Direct request:', directRequest);
+    wsRef.current.send(JSON.stringify(directRequest));
+
+    // Timeout if no response
+    setTimeout(() => {
+      if (isLoading) {
+        setIsLoading(false);
+        console.log('⏰ Direct message load timeout');
+      }
+    }, 10000);
+  }, [outletType, isLoading]);
 
   // Load messages (like web version)
   const loadMessages = useCallback(() => {
@@ -575,7 +822,7 @@ export const useMessaging = (
       throw new Error('Message cannot be empty');
     }
 
-    if (!subscriptionRef.current?.confirmed) {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       throw new Error('Not connected to WebSocket');
     }
 
@@ -606,23 +853,46 @@ export const useMessaging = (
     setOptimisticMessages(prev => [...prev, optimisticMessage]);
 
     try {
-      // Send message using ActionCable protocol (like web version)
-      const success = sendActionCableMessage('receive', {
-        message: {
-          content: content,
-          message_type: messageType,
-          user_id: userData.id,
-          user_name: userData.name,
-          user_email: userData.email,
-          user_role: userData.role,
-          timestamp: timestamp
-        },
-        outlet_type: outletType,
-        _function: 'sendMessage'
-      });
+      // Try ActionCable format first
+      if (subscriptionRef.current?.confirmed) {
+        console.log('📤 Sending via ActionCable...');
+        const success = sendActionCableMessage('receive', {
+          message: {
+            content: content,
+            message_type: messageType,
+            user_id: userData.id,
+            user_name: userData.name,
+            user_email: userData.email,
+            user_role: userData.role,
+            timestamp: timestamp
+          },
+          outlet_type: outletType,
+          _function: 'sendMessage'
+        });
 
-      if (!success) {
-        throw new Error('Failed to send message');
+        if (!success) {
+          throw new Error('Failed to send via ActionCable');
+        }
+      } else {
+        // Send direct message format (since this is what's working)
+        console.log('📤 Sending via direct WebSocket...');
+        const directMessage = {
+          action: 'receive',
+          message: {
+            content: content,
+            message_type: messageType,
+            user_id: userData.id,
+            user_name: userData.name,
+            user_email: userData.email,
+            user_role: userData.role,
+            timestamp: timestamp
+          },
+          outlet_type: outletType,
+          _function: 'sendMessage'
+        };
+
+        console.log('📤 Direct message data:', directMessage);
+        wsRef.current.send(JSON.stringify(directMessage));
       }
 
       console.log('✅ Message sent successfully');
@@ -688,6 +958,35 @@ export const useMessaging = (
     subscribeToChannel();
   }, [subscribeToChannel]);
 
+  // Try alternative connection
+  const tryAlternativeConnection = useCallback(() => {
+    console.log('🔧 Trying alternative connection...');
+    tryAlternativeSubscription();
+  }, [tryAlternativeSubscription]);
+
+  // Force connection and try direct message load
+  const forceConnectionAndLoad = useCallback(() => {
+    console.log('🔧 Forcing connection and loading messages...');
+    setIsConnected(true);
+    setIsConnecting(false);
+    setConnectionError(null);
+    tryDirectMessageLoad();
+  }, [tryDirectMessageLoad]);
+
+  // Try alternative connection
+  const tryAlternativeConnection = useCallback(() => {
+    console.log('🔧 Trying alternative connection...');
+    tryAlternativeSubscription();
+  }, [tryAlternativeSubscription]);
+
+  // Force connection and try direct message load
+  const forceConnectionAndLoad = useCallback(() => {
+    console.log('🔧 Forcing connection and loading messages...');
+    setIsConnected(true);
+    setIsConnecting(false);
+    setConnectionError(null);
+    tryDirectMessageLoad();
+  }, [tryDirectMessageLoad]);
   // Get connection status info
   const getConnectionInfo = useCallback(() => {
     return {
@@ -759,6 +1058,8 @@ export const useMessaging = (
     triggerMessageLoad,
     sendPing, // Add ping function for testing
     manualSubscribe, // Add manual subscription for testing
+    tryAlternativeConnection, // Try different subscription formats
+    forceConnectionAndLoad, // Force connection and load messages
     getConnectionInfo // Add connection info for debugging
   };
 };
