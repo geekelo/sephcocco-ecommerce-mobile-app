@@ -7,10 +7,17 @@ const USER_KEY = 'userData';
 export const saveToken = async (token: string) => {
   await SecureStore.setItemAsync(TOKEN_KEY, token);
 };
-
 export const getToken = async (): Promise<string | null> => {
-  return await SecureStore.getItemAsync(TOKEN_KEY);
+  try {
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
+    console.log("🧪 getToken() result:", token);
+    return token;
+  } catch (error) {
+    console.error("❌ Failed to get token from SecureStore:", error);
+    return null;
+  }
 };
+
 
 export const deleteToken = async () => {
   await SecureStore.deleteItemAsync(TOKEN_KEY);
