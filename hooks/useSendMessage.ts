@@ -707,85 +707,10 @@ export const useMessaging = (
   }, [outletType]);
 
   // Try alternative subscription format (in case ActionCable format is different)
-  const tryAlternativeSubscription = useCallback(() => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.log('❌ Cannot try alternative subscription: WebSocket not ready');
-      return;
-    }
-
-    console.log('🔧 Trying alternative subscription formats...');
-
-    // Format 1: Direct channel subscription
-    const altSub1 = {
-      channel: 'MessagingChannel',
-      outlet_type: outletType
-    };
-    console.log('📡 Alt format 1:', altSub1);
-    wsRef.current.send(JSON.stringify(altSub1));
-
-    setTimeout(() => {
-      // Format 2: Simple subscribe command
-      const altSub2 = {
-        subscribe: 'MessagingChannel',
-        outlet_type: outletType
-      };
-      console.log('📡 Alt format 2:', altSub2);
-      wsRef.current?.send(JSON.stringify(altSub2));
-    }, 500);
-
-    setTimeout(() => {
-      // Format 3: Rails format
-      const altSub3 = {
-        action: 'subscribe',
-        channel: 'MessagingChannel',
-        outlet_type: outletType
-      };
-      console.log('📡 Alt format 3:', altSub3);
-      wsRef.current?.send(JSON.stringify(altSub3));
-    }, 1000);
-
-    // If still no response, assume we're connected and try to load messages
-    setTimeout(() => {
-      if (!subscriptionRef.current?.confirmed) {
-        console.log('🤷 No subscription confirmed, assuming connection and trying to load messages...');
-        // Force connection state
-        setIsConnected(true);
-        setIsConnecting(false);
-        setConnectionError(null);
-        
-        // Try loading messages directly
-        tryDirectMessageLoad();
-      }
-    }, 2000);
-  }, [outletType]);
+  
 
   // Try loading messages without ActionCable subscription
-  const tryDirectMessageLoad = useCallback(() => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.log('❌ Cannot try direct message load: WebSocket not ready');
-      return;
-    }
-
-    console.log('📤 Trying direct message load...');
-    setIsLoading(true);
-
-    const directRequest = {
-      action: 'request_my_messages',
-      outlet_type: outletType,
-      _function: 'loadUserMessages'
-    };
-
-    console.log('📤 Direct request:', directRequest);
-    wsRef.current.send(JSON.stringify(directRequest));
-
-    // Timeout if no response
-    setTimeout(() => {
-      if (isLoading) {
-        setIsLoading(false);
-        console.log('⏰ Direct message load timeout');
-      }
-    }, 10000);
-  }, [outletType, isLoading]);
+ 
 
   // Load messages (like web version)
   const loadMessages = useCallback(() => {
@@ -959,19 +884,7 @@ export const useMessaging = (
   }, [subscribeToChannel]);
 
   // Try alternative connection
-  const tryAlternativeConnection = useCallback(() => {
-    console.log('🔧 Trying alternative connection...');
-    tryAlternativeSubscription();
-  }, [tryAlternativeSubscription]);
-
-  // Force connection and try direct message load
-  const forceConnectionAndLoad = useCallback(() => {
-    console.log('🔧 Forcing connection and loading messages...');
-    setIsConnected(true);
-    setIsConnecting(false);
-    setConnectionError(null);
-    tryDirectMessageLoad();
-  }, [tryDirectMessageLoad]);
+  
 
   // Try alternative connection
   const tryAlternativeConnection = useCallback(() => {
