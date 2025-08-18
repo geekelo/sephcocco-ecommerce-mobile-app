@@ -218,8 +218,12 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
           setTimeout(() => {
             if (!messagesLoadedRef.current) {
               console.log('⏰ Loading messages after subscription confirmation...');
+              console.log('⏰ Current user ID for loading:', currentUserIdRef.current);
+              console.log('⏰ Outlet type for loading:', outletTypeRef.current);
               messagesLoadedRef.current = true;
               loadMessages();
+            } else {
+              console.log('⏰ Messages already loaded, skipping');
             }
           }, 1000);
         }
@@ -238,16 +242,24 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
       // Handle direct message responses (not wrapped in ActionCable)
       if (data.type === 'user_messages_response') {
         console.log('📨 Direct user messages response received:', data);
+        console.log('📨 Direct messages count:', data.messages?.length || 0);
+        console.log('📨 Direct full messages array:', data.messages);
         
         if (data.messages) {
           const processedMessages = data.messages.map((msg) => ({
             ...msg,
             display_time: formatDisplayTime(msg.timestamp || msg.created_at)
           }));
+          console.log('📨 Direct processed messages:', processedMessages);
+          console.log('📨 About to call setMessages (direct) with:', processedMessages.length, 'messages');
           setMessages(processedMessages);
-          console.log('✅ Loaded messages (direct):', processedMessages.length);
+          console.log('📨 setMessages (direct) called successfully');
+        } else {
+          console.log('📨 No direct messages in response, setting empty array');
+          setMessages([]);
         }
         setIsLoading(false);
+        console.log('📨 Direct loading set to false');
         return;
       }
 
@@ -277,16 +289,24 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
         // Handle user messages response
         if (messageData.type === 'user_messages_response') {
           console.log('📨 User messages response received:', messageData);
+          console.log('📨 Messages in response:', messageData.messages?.length || 0);
+          console.log('📨 Full messages array:', messageData.messages);
           
           if (messageData.messages) {
             const processedMessages = messageData.messages.map((msg) => ({
               ...msg,
               display_time: formatDisplayTime(msg.timestamp || msg.created_at)
             }));
+            console.log('📨 Processed messages:', processedMessages);
+            console.log('📨 About to call setMessages with:', processedMessages.length, 'messages');
             setMessages(processedMessages);
-            console.log('✅ Loaded messages via ActionCable:', processedMessages.length);
+            console.log('📨 setMessages called successfully');
+          } else {
+            console.log('📨 No messages in response, setting empty array');
+            setMessages([]);
           }
           setIsLoading(false);
+          console.log('📨 Loading set to false');
           return;
         }
 
@@ -359,8 +379,17 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
 
   // Load messages
   const loadMessages = useCallback(() => {
+    console.log('📤 loadMessages called');
+    console.log('📤 WebSocket state:', wsRef.current?.readyState);
+    console.log('📤 WebSocket OPEN constant:', WebSocket.OPEN);
+    console.log('📤 Current user ID:', currentUserIdRef.current);
+    console.log('📤 Outlet type:', outletTypeRef.current);
+    console.log('📤 Subscription confirmed:', subscriptionRef.current?.confirmed);
+    
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       console.log('❌ Cannot load messages: WebSocket not ready');
+      console.log('❌ WebSocket exists:', !!wsRef.current);
+      console.log('❌ WebSocket ready state:', wsRef.current?.readyState);
       return;
     }
 
@@ -370,6 +399,7 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
     // Try ActionCable format first
     if (subscriptionRef.current?.confirmed) {
       console.log('📤 Loading via ActionCable...');
+      console.log('📤 Subscription details:', subscriptionRef.current);
       const success = sendActionCableMessage('request_my_messages', {
         outlet_type: outletTypeRef.current,
         _function: 'loadUserMessages'
@@ -386,15 +416,17 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
     
     // Timeout if no response
     setTimeout(() => {
-      if (isLoading) {
-        setIsLoading(false);
-        console.log('⏰ Load messages timeout');
-      }
+      console.log('⏰ Timeout check - isLoading:', isLoading);
+      setIsLoading(false);
+      console.log('⏰ Load messages timeout - no response received');
     }, 10000);
   }, [isLoading, sendActionCableMessage]);
 
   // Try loading messages without ActionCable subscription
   const tryDirectMessageLoad = useCallback(() => {
+    console.log('📤 tryDirectMessageLoad called');
+    console.log('📤 WebSocket state in direct load:', wsRef.current?.readyState);
+    
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       console.log('❌ Cannot try direct message load: WebSocket not ready');
       return;
@@ -405,11 +437,14 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
     const directRequest = {
       action: 'request_my_messages',
       outlet_type: outletTypeRef.current,
+      user_id: currentUserIdRef.current, // Add user_id for better targeting
       _function: 'loadUserMessages'
     };
 
     console.log('📤 Direct request:', directRequest);
+    console.log('📤 Sending direct request JSON:', JSON.stringify(directRequest));
     wsRef.current.send(JSON.stringify(directRequest));
+    console.log('📤 Direct request sent successfully');
   }, []);
 
   // Clean up connection
@@ -657,8 +692,11 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
   // Debug logging for state
   useEffect(() => {
     console.log('📊 Messages state updated:', messages.length);
+    console.log('📊 Messages array:', messages);
     console.log('📊 Optimistic messages state updated:', optimisticMessages.length);
+    console.log('📊 Optimistic messages array:', optimisticMessages);
     console.log('📊 All messages:', allMessages.length);
+    console.log('📊 All messages array:', allMessages);
   }, [messages, optimisticMessages, allMessages]);
 
   // Public functions
