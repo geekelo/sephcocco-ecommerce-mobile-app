@@ -158,6 +158,8 @@ export const Messaging: React.FC<MessagingProps> = ({
     triggerMessageLoad,
   } = useMessaging(authToken, outletType, userData);
 
+  console.log(allMessages)
+  console.log(optimisticMessages)
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (flatListRef.current && allMessages.length > 0) {
