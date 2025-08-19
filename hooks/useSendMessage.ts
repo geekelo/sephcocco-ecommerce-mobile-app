@@ -29,8 +29,9 @@ const mockUserData = {
 };
 
 export const useMessaging = (authToken, outletType = '', userData = mockUserData) => {
-  console.log('🚀 useMessaging (React Native) hook called');
-  console.log('🔑 Auth token:', !!authToken);
+  console.log('🚀 useMessaging hook called');
+  console.log('🔑 Auth token exists:', !!authToken);
+  console.log('🔑 Auth token length:', authToken?.length);
   console.log('🏪 Outlet type:', outletType);
   console.log('👤 User data:', userData);
   
@@ -56,6 +57,7 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
 
   // Update refs when props change
   useEffect(() => {
+    console.log('📝 Updating refs with new props');
     authTokenRef.current = authToken;
     outletTypeRef.current = outletType;
     userDataRef.current = userData;
@@ -80,13 +82,17 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
 
   // Send message via ActionCable protocol
   const sendActionCableMessage = useCallback((action, data) => {
+    console.log('📤 sendActionCableMessage called:', { action, data });
+    
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       console.error('❌ Cannot send message: WebSocket not connected');
+      console.log('WebSocket state:', wsRef.current?.readyState);
       return false;
     }
 
     if (!subscriptionRef.current?.confirmed) {
       console.error('❌ Cannot send message: Subscription not confirmed');
+      console.log('Subscription ref:', subscriptionRef.current);
       return false;
     }
 
@@ -100,11 +106,18 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
     };
 
     console.log('📤 Sending ActionCable message:', message);
-    wsRef.current.send(JSON.stringify(message));
-    return true;
+    
+    try {
+      wsRef.current.send(JSON.stringify(message));
+      console.log('✅ ActionCable message sent successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error sending ActionCable message:', error);
+      return false;
+    }
   }, []);
 
-  // Process new message (centralized logic) - FIXED to match backend broadcast format
+  // Process new message (centralized logic)
   const processNewMessage = useCallback((messageData, source) => {
     console.log(`🚨 Processing new message from ${source}:`, JSON.stringify(messageData, null, 2));
 
@@ -115,7 +128,6 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
 
     const currentTimestamp = messageData.created_at || messageData.timestamp || new Date().toISOString();
     
-    // FIXED: Use correct sender info from backend broadcast format
     const senderId = messageData.sender_id || messageData.user?.id || messageData.user_id;
     const threadOwnerId = messageData.thread_owner_id || messageData.user_id;
     const isFromCurrentUser = userData && String(senderId) === String(userData.id);
@@ -139,26 +151,16 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
       display_time: formatDisplayTime(currentTimestamp)
     };
 
-    // FIXED: Check if message belongs to current user's conversation
     const isMyConversation = (
-      // If I'm the thread owner (this is my conversation)
       String(threadOwnerId) === String(userData?.id) ||
-      // If I sent the message
       isFromCurrentUser ||
-      // If it's explicitly broadcast to me
       messageData.broadcast === true ||
-      // Fallback: if user_id matches current user
       String(messageData.user_id) === String(userData?.id)
     );
 
     console.log('🔍 Message belongs to current user:', isMyConversation);
-    console.log('🔍 Conversation check details:');
-    console.log('   - Thread owner matches:', String(threadOwnerId) === String(userData?.id));
-    console.log('   - Is from current user:', isFromCurrentUser);
-    console.log('   - Is broadcast:', messageData.broadcast === true);
 
     if (isMyConversation) {
-      // Remove matching optimistic message if it's from current user
       if (isFromCurrentUser) {
         console.log('🔄 Removing matching optimistic message');
         setOptimisticMessages(prev => 
@@ -166,7 +168,6 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
         );
       }
 
-      // Add to messages if not duplicate
       setMessages(prev => {
         const exists = prev.some(msg => 
           msg.id === newMessage.id || 
@@ -187,21 +188,17 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
     }
   }, [userData]);
 
-  // Load user messages via WebSocket - FIXED to use correct backend method
+  // Load user messages via WebSocket
   const loadUserMessages = useCallback(async () => {
     console.log('📤 loadUserMessages called');
     console.log('📤 Current user ID:', currentUserIdRef.current);
     console.log('📤 Outlet type:', outletTypeRef.current);
     console.log('📤 WebSocket ready:', wsRef.current?.readyState === WebSocket.OPEN);
     console.log('📤 Subscription confirmed:', subscriptionRef.current?.confirmed);
+    console.log('📤 Is connected:', isConnected);
     
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       console.log('❌ Cannot load messages: WebSocket not ready');
-      return;
-    }
-
-    if (!isConnected) {
-      console.log('❌ Cannot load messages: Not connected');
       return;
     }
 
@@ -214,7 +211,6 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
     console.log('🔄 Setting loading state to true');
 
     try {
-      // FIXED: Use the exact method name that the backend expects
       if (subscriptionRef.current?.confirmed) {
         console.log('📤 Loading via ActionCable subscription...');
         const success = sendActionCableMessage('request_my_messages', {
@@ -255,7 +251,6 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
 
     console.log('📤 Trying direct message load...');
 
-    // FIXED: Use the exact action name the backend expects
     const directRequest = {
       action: 'request_my_messages',
       outlet_type: outletTypeRef.current,
@@ -264,8 +259,13 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
     };
 
     console.log('📤 Direct request:', JSON.stringify(directRequest));
-    wsRef.current.send(JSON.stringify(directRequest));
-    console.log('📤 Direct request sent');
+    
+    try {
+      wsRef.current.send(JSON.stringify(directRequest));
+      console.log('📤 Direct request sent successfully');
+    } catch (error) {
+      console.error('❌ Error sending direct request:', error);
+    }
   }, []);
 
   // Handle WebSocket messages (ActionCable protocol)
@@ -348,7 +348,7 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
         return;
       }
 
-      // Handle real-time messages - FIXED to match backend broadcast format
+      // Handle real-time messages
       if (data.type === 'new_message' || 
           data.type === 'broadcast_message' || 
           data.type === 'message_broadcast' || 
@@ -357,13 +357,6 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
           data.broadcast === true) {
         
         console.log('🚨 REAL-TIME: Direct message received!');
-        console.log('🚨 Message details:', {
-          type: data.type,
-          content: data.content,
-          sender_id: data.sender_id,
-          thread_owner_id: data.thread_owner_id,
-          user_id: data.user_id
-        });
         processNewMessage(data, 'direct');
         return;
       }
@@ -379,7 +372,6 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
 
         console.log('📨 ActionCable wrapped message:', JSON.stringify(messageData, null, 2));
 
-        // Handle user messages response via ActionCable
         if (messageData.type === 'user_messages_response') {
           console.log('📨 User messages response via ActionCable:', messageData);
           
@@ -395,7 +387,6 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
           return;
         }
 
-        // Handle real-time messages via ActionCable - FIXED
         if (messageData.type === 'new_message' || 
             messageData.type === 'broadcast_message' || 
             messageData.type === 'message_broadcast' || 
@@ -404,18 +395,10 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
             messageData.broadcast === true) {
           
           console.log('🚨 REAL-TIME: ActionCable wrapped message received!');
-          console.log('🚨 Wrapped message details:', {
-            type: messageData.type,
-            content: messageData.content,
-            sender_id: messageData.sender_id,
-            thread_owner_id: messageData.thread_owner_id,
-            user_id: messageData.user_id
-          });
           processNewMessage(messageData, 'ActionCable');
           return;
         }
 
-        // Handle ping/pong via ActionCable
         if (messageData.type === 'ping') {
           console.log('🏓 ActionCable ping received, responding with pong');
           sendActionCableMessage('pong', { message: messageData.message });
@@ -427,15 +410,18 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
 
     } catch (error) {
       console.error('❌ Error parsing WebSocket message:', error);
+      console.error('Raw event data:', event.data);
     }
   }, [processNewMessage, sendActionCableMessage, loadUserMessages]);
 
   // Separate function to handle channel subscription
   const subscribeToChannel = useCallback(() => {
     console.log('📡 subscribeToChannel called');
+    console.log('📡 Current outlet type:', outletTypeRef.current);
     
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       console.log('❌ Cannot subscribe: WebSocket not ready');
+      console.log('❌ WebSocket state:', wsRef.current?.readyState);
       return;
     }
     
@@ -450,14 +436,19 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
     };
     
     console.log('📡 Subscribing to channel:', subscribeMessage);
-    wsRef.current.send(JSON.stringify(subscribeMessage));
     
-    subscriptionRef.current = {
-      identifier: identifier,
-      confirmed: false
-    };
-    
-    console.log('📡 Subscription stored:', subscriptionRef.current);
+    try {
+      wsRef.current.send(JSON.stringify(subscribeMessage));
+      
+      subscriptionRef.current = {
+        identifier: identifier,
+        confirmed: false
+      };
+      
+      console.log('📡 Subscription stored:', subscriptionRef.current);
+    } catch (error) {
+      console.error('❌ Error subscribing to channel:', error);
+    }
   }, []);
 
   // Auto-load messages when connection becomes active
@@ -500,25 +491,33 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
 
   // Start WebSocket connection
   const startConnection = useCallback(() => {
+    console.log('🔐 Starting WebSocket connection...');
+    console.log('🔐 Auth token exists:', !!authTokenRef.current);
+    console.log('🔐 Outlet type:', outletTypeRef.current);
+    
     setIsConnecting(true);
     setConnectionError(null);
     messagesLoadedRef.current = false;
 
-    console.log('🔐 Starting React Native WebSocket connection...');
-
     try {
+      // Validate token format
+      if (!authTokenRef.current || authTokenRef.current.trim() === '') {
+        throw new Error('Auth token is empty or invalid');
+      }
+
       const wsUrl = `wss://sephcocco-lounge-api.onrender.com/cable?token=${encodeURIComponent(authTokenRef.current)}`;
-      console.log('🔗 WebSocket URL:', wsUrl);
+      console.log('🔗 WebSocket URL (sanitized):', wsUrl.replace(/token=[^&]+/, 'token=***'));
       
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log('🎉 React Native WebSocket connection opened');
+        console.log('🎉 WebSocket connection opened');
+        console.log('🎉 Ready state:', wsRef.current.readyState);
         
         // ActionCable should send a welcome message automatically
         setTimeout(() => {
           if (!subscriptionRef.current?.confirmed) {
-            console.log('⏰ No welcome received, trying immediate subscription...');
+            console.log('⏰ No welcome received after 2s, trying immediate subscription...');
             subscribeToChannel();
           }
         }, 2000);
@@ -527,7 +526,12 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
       wsRef.current.onmessage = handleMessage;
 
       wsRef.current.onclose = (event) => {
-        console.log('💔 React Native WebSocket closed:', event.code, event.reason);
+        console.log('💔 WebSocket closed:', {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean
+        });
+        
         setIsConnected(false);
         setIsConnecting(false);
         connectionAttemptedRef.current = false;
@@ -535,6 +539,15 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
         
         if (subscriptionRef.current) {
           subscriptionRef.current.confirmed = false;
+        }
+        
+        // Provide more specific error messages
+        if (event.code === 1006) {
+          setConnectionError('Connection failed - possibly authentication issue');
+        } else if (event.code === 1000) {
+          setConnectionError('Connection closed normally');
+        } else {
+          setConnectionError(`Connection closed with code: ${event.code}`);
         }
         
         // Auto-reconnect if not intentionally closed
@@ -551,16 +564,19 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
       };
 
       wsRef.current.onerror = (error) => {
-        console.error('❌ React Native WebSocket error:', error);
-        setConnectionError('Connection failed');
+        console.error('❌ WebSocket error:', error);
+        console.error('❌ Error type:', error.type);
+        console.error('❌ WebSocket state:', wsRef.current?.readyState);
+        
+        setConnectionError('Connection failed - check network and authentication');
         setIsConnected(false);
         setIsConnecting(false);
         connectionAttemptedRef.current = false;
       };
 
     } catch (error) {
-      console.error('❌ Failed to create React Native WebSocket:', error);
-      setConnectionError('Failed to create connection');
+      console.error('❌ Failed to create WebSocket:', error);
+      setConnectionError(`Failed to create connection: ${error.message}`);
       setIsConnecting(false);
       connectionAttemptedRef.current = false;
     }
@@ -568,11 +584,19 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
 
   // Connect to WebSocket
   const connect = useCallback(() => {
-    console.log('🔐 React Native Connect function called');
+    console.log('🔐 Connect function called');
+    console.log('🔐 Current state:', {
+      hasAuthToken: !!authTokenRef.current,
+      hasOutletType: !!outletTypeRef.current,
+      connectionAttempted: connectionAttemptedRef.current,
+      isConnecting,
+      isConnected
+    });
     
     if (!authTokenRef.current || !outletTypeRef.current) {
-      console.log('❌ Missing auth token or outlet type');
-      setConnectionError('Missing auth token or outlet type');
+      const errorMsg = `Missing ${!authTokenRef.current ? 'auth token' : 'outlet type'}`;
+      console.log('❌', errorMsg);
+      setConnectionError(errorMsg);
       return;
     }
 
@@ -595,7 +619,7 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
     startConnection();
   }, [startConnection, cleanup, isConnecting, isConnected]);
 
-  // Send message via WebSocket - FIXED to match backend format
+  // Send message via WebSocket
   const sendMessage = useCallback(async (content, messageType = 'text', productId = null) => {
     console.log('📤 SEND_MESSAGE called with content:', content);
     
@@ -647,7 +671,6 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
         timestamp: timestamp
       };
 
-      // FIXED: Send message using the backend's expected format
       if (subscriptionRef.current?.confirmed) {
         console.log('📤 Sending via ActionCable...');
         const success = sendActionCableMessage('receive', {
@@ -708,28 +731,31 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
 
   // Auto-connect
   useEffect(() => {
-    console.log('🔌 React Native Auto-connect useEffect triggered');
+    console.log('🔌 Auto-connect useEffect triggered');
+    console.log('🔌 Effect deps:', {
+      hasAuthToken: !!authToken,
+      hasOutletType: !!outletType,
+      autoConnectAttempted: autoConnectAttemptedRef.current,
+      isConnected,
+      isConnecting
+    });
     
     if (authToken && outletType && !autoConnectAttemptedRef.current && !isConnected && !isConnecting) {
-      console.log('🚀 React Native auto-connecting to WebSocket...');
+      console.log('🚀 Auto-connecting to WebSocket...');
       autoConnectAttemptedRef.current = true;
-      connect();
+      
+      // Add small delay to ensure refs are updated
+      setTimeout(() => {
+        connect();
+      }, 100);
     }
 
     return () => {
-      console.log('🧹 React Native cleaning up WebSocket connection...');
+      console.log('🧹 Cleaning up WebSocket connection...');
       cleanup();
       autoConnectAttemptedRef.current = false;
     };
   }, [authToken, outletType, connect, cleanup, isConnected, isConnecting]);
-
-  // Debug logging for state
-  useEffect(() => {
-    console.log('📊 Messages state updated:', messages.length);
-    console.log('📊 Messages array:', messages);
-    console.log('📊 Optimistic messages state updated:', optimisticMessages.length);
-    console.log('📊 All messages:', allMessages.length);
-  }, [messages, optimisticMessages]);
 
   // Combine messages for display
   const allMessages = [...messages, ...optimisticMessages].sort((a, b) => 
@@ -748,13 +774,6 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
 
   const triggerMessageLoad = useCallback(() => {
     console.log('🔄 Manually triggering message load...');
-    console.log('🔄 Current connection state:', {
-      isConnected,
-      wsState: wsRef.current?.readyState,
-      subscriptionConfirmed: subscriptionRef.current?.confirmed,
-      hasUser: !!currentUserIdRef.current,
-      hasOutlet: !!outletTypeRef.current
-    });
     
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       if (subscriptionRef.current?.confirmed) {
@@ -773,13 +792,12 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
           _function: 'manualLoad'
         };
         
-        console.log('🔄 Manual request data:', requestData);
         wsRef.current.send(JSON.stringify(requestData));
       }
     } else {
       console.log('❌ Cannot trigger message load - WebSocket not ready');
     }
-  }, [isConnected, sendActionCableMessage]);
+  }, [sendActionCableMessage]);
 
   const sendPing = useCallback(() => {
     console.log('🏓 Sending manual ping...');
@@ -810,9 +828,10 @@ export const useMessaging = (authToken, outletType = '', userData = mockUserData
       hasUserData: !!userData,
       isConnected,
       isConnecting,
-      isLoading
+      isLoading,
+      connectionError
     };
-  }, [authToken, outletType, userData, isConnected, isConnecting, isLoading]);
+  }, [authToken, outletType, userData, isConnected, isConnecting, isLoading, connectionError]);
 
   // Return all the hook's functionality
   return {
