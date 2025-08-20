@@ -16,7 +16,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useMessaging } from '@/hooks/useSendMessage';
+import { useMessaging } from '@/hooks/useMessageHook';
 
 // Types
 interface Message {
