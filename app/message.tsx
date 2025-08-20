@@ -156,10 +156,16 @@ export const Messaging: React.FC<MessagingProps> = ({
     refreshMessages,
     clearOptimisticMessages,
     triggerMessageLoad,
+    debugState,
+    addTestMessage,
   } = useMessaging(authToken, outletType, userData);
 
-  console.log(allMessages)
-  console.log(optimisticMessages)
+  // Log allMessages whenever it changes
+  useEffect(() => {
+    console.log('📊 allMessages updated:', allMessages.length);
+    console.log('📊 Current allMessages:', allMessages);
+  }, [allMessages]);
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (flatListRef.current && allMessages.length > 0) {
@@ -220,8 +226,9 @@ export const Messaging: React.FC<MessagingProps> = ({
     setNewMessage(randomMessage);
   }, []);
 
-  const renderMessage = useCallback(({ item }: { item: Message }) => (
+  const renderMessage = useCallback(({ item, index }: { item: Message, index: number }) => (
     <MessageBubble
+      key={`message-${item.id}-${index}`}
       message={item}
       isCurrentUser={item.user_id === userData?.id}
       currentUserId={userData?.id || ''}
@@ -233,12 +240,20 @@ export const Messaging: React.FC<MessagingProps> = ({
       <Feather name="message-circle" size={48} color="#d1d5db" />
       <Text style={styles.emptyStateTitle}>No messages yet</Text>
       <Text style={styles.emptyStateSubtitle}>Start a conversation by sending a message</Text>
-      <TouchableOpacity 
-        style={styles.testButton} 
-        onPress={handleSendTestMessage}
-      >
-        <Text style={styles.testButtonText}>Send Test Message</Text>
-      </TouchableOpacity>
+      <View style={styles.emptyStateActions}>
+        <TouchableOpacity 
+          style={styles.testButton} 
+          onPress={handleSendTestMessage}
+        >
+          <Text style={styles.testButtonText}>Send Test Message</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.localTestButton} 
+          onPress={addTestMessage}
+        >
+          <Text style={styles.localTestButtonText}>Add Local Test</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -246,6 +261,25 @@ export const Messaging: React.FC<MessagingProps> = ({
     <View style={styles.loadingState}>
       <ActivityIndicator size="large" color="#10b981" />
       <Text style={styles.loadingText}>Loading messages...</Text>
+      <TouchableOpacity 
+        style={styles.forceLoadButton}
+        onPress={triggerMessageLoad}
+      >
+        <Text style={styles.forceLoadButtonText}>Force Load Messages</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderHeader = () => (
+    <View style={styles.messagesHeader}>
+      <Text style={styles.messagesTitle}>
+        Messages ({allMessages.length})
+      </Text>
+      <View style={styles.messagesCounts}>
+        <Text style={styles.countText}>
+          Regular: {messages.length} | Optimistic: {optimisticMessages.length}
+        </Text>
+      </View>
     </View>
   );
 
@@ -268,14 +302,21 @@ export const Messaging: React.FC<MessagingProps> = ({
         <Text style={styles.debugText}>
           Messages: {messages.length} | Optimistic: {optimisticMessages.length} | Total: {allMessages.length}
         </Text>
-        <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
-          <Feather name="refresh-cw" size={16} color="#6b7280" />
-        </TouchableOpacity>
+        <View style={styles.debugActions}>
+          <TouchableOpacity onPress={handleRefresh} style={styles.debugButton}>
+            <Feather name="refresh-cw" size={16} color="#6b7280" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={debugState} style={styles.debugButton}>
+            <Feather name="info" size={16} color="#6b7280" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Messages List */}
       <View style={styles.messagesContainer}>
-        {isLoading ? (
+        {renderHeader()}
+        
+        {isLoading && allMessages.length === 0 ? (
           renderLoadingState()
         ) : allMessages.length === 0 ? (
           renderEmptyState()
@@ -283,12 +324,17 @@ export const Messaging: React.FC<MessagingProps> = ({
           <FlatList
             ref={flatListRef}
             data={allMessages}
-            keyExtractor={(item, index) => `${item.id}-${index}`}
+            keyExtractor={(item, index) => `${item.id}-${index}-${item.timestamp}`}
             renderItem={renderMessage}
             contentContainerStyle={styles.messagesList}
             showsVerticalScrollIndicator={false}
             onRefresh={handleRefresh}
             refreshing={isLoading}
+            extraData={allMessages.length} // Force re-render when message count changes
+            initialNumToRender={20}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            removeClippedSubviews={false} // Keep all messages in memory for better debugging
           />
         )}
       </View>
@@ -345,6 +391,12 @@ export const Messaging: React.FC<MessagingProps> = ({
             onPress={triggerMessageLoad}
           >
             <Text style={styles.quickActionText}>Force Load</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={addTestMessage}
+          >
+            <Text style={styles.quickActionText}>Add Test</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -525,6 +577,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  
+  messagesHeader: {
+    padding: 16,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  messagesTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  messagesCounts: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  countText: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  messagesList: {
+    padding: 16,
+    paddingBottom: 32,
+  },
   faqContainer: {
     flex: 1,
     padding: 24,
@@ -600,10 +678,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f9fafb',
   },
-  messagesList: {
-    padding: 16,
-    paddingBottom: 32,
-  },
+ 
   
   // Message Bubble Styles
   messageBubble: {
@@ -629,6 +704,52 @@ const styles = StyleSheet.create({
   optimisticMessage: {
     opacity: 0.7,
   },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateSubtitle: {
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  emptyStateActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  testButton: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  testButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  localTestButton: {
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  localTestButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  
   messageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -666,37 +787,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   
-  // Empty State Styles
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyStateSubtitle: {
-    fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  testButton: {
-    backgroundColor: '#10b981',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  testButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   
   // Loading State Styles
   loadingState: {
@@ -736,6 +826,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
     marginRight: 12,
   },
+   
+  debugActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  debugButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  
   sendButton: {
     width: 40,
     height: 40,
@@ -764,6 +864,17 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontWeight: '500',
   },
+  forceLoadButton: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  forceLoadButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  }
 });
 
 // Export default as MessageMain for easy usage
