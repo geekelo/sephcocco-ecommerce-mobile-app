@@ -1,6 +1,5 @@
 import { apiClient } from "../api.service";
 
-// ✅ Submit Payment
 export const iHavePaid = async (
   outlet: string,
   orderIds: string[],
@@ -21,13 +20,15 @@ export const iHavePaid = async (
       transaction_id: transactionId,
     },
   };
-console.log('payload',payload)
+
+  console.log("payload", payload);
+
   const response = await client.post(url, payload);
-  console.log(url)
-  console.log(response, 'paymentres')
+  console.log(url);
+  console.log(response, "paymentres");
+
   return response.data;
 };
-
 
 export const fetchPayments = async (
   outlet: string,
@@ -45,8 +46,27 @@ export const fetchPayments = async (
     page,
     per_page: perPage,
   };
-console.log(url)
+
+  console.log(url);
   const response = await client.get(url, { params });
-console.log(response)
+  console.log(response);
+
+  return response.data;
+};
+
+export const verifyPayment = async (
+  outlet: string,
+  reference: string
+) => {
+  const url = `/${outlet}/sephcocco_${outlet}_payments/verify`;
+
+  const client = await apiClient();
+
+  const payload = { reference };
+
+  const response = await client.post(url, payload);
+
+  console.log("verify response", response);
+
   return response.data;
 };

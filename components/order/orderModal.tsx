@@ -7,8 +7,8 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
+  SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import OrderSummary from './orderSummary';
@@ -40,111 +40,138 @@ const OrderModal: React.FC<OrderModalProps> = ({
     return [(product as any)?.order_number].filter(Boolean);
   };
 
+  const handleProceedToPayment = () => {
+    if (!address.trim()) {
+      alert('Please enter a delivery address before proceeding to payment.');
+      return;
+    }
+    setActiveTab('paymentMethod');
+  };
+
+  // Reset state when modal closes
+  const handleClose = () => {
+    setQuantity(1);
+    setAddress('');
+    setActiveTab('orderSummary');
+    onClose();
+  };
+
   return (
-   <Modal
-  visible={visible}
-  animationType="slide"
-  onRequestClose={onClose}
-  presentationStyle="fullScreen"
->
-  <View style={styles.overlay}>
-    <View style={styles.modalContainer}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Order Payment</Text>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Feather name="x" size={24} color="white" />
-        </TouchableOpacity>
-      </View>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      onRequestClose={handleClose}
+      presentationStyle="fullScreen"
+      statusBarTranslucent={false}
+    >
+      <StatusBar barStyle="light-content" backgroundColor="#2d3748" />
+      <SafeAreaView style={styles.container}>
+        <View style={styles.modalContainer}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Order Payment</Text>
+            <TouchableOpacity 
+              onPress={handleClose} 
+              style={styles.closeButton}
+              activeOpacity={0.7}
+            >
+              <Feather name="x" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
 
-      {/* Tab Switcher */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'orderSummary' && styles.activeTabButton]}
-          onPress={() => setActiveTab('orderSummary')}
-        >
-          <Text style={[styles.tabText, activeTab === 'orderSummary' && styles.activeTabText]}>
-            Order Summary
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'paymentMethod' && styles.activeTabButton]}
-          onPress={() => setActiveTab('paymentMethod')}
-        >
-          <Text style={[styles.tabText, activeTab === 'paymentMethod' && styles.activeTabText]}>
-            Payment
-          </Text>
-        </TouchableOpacity>
-      </View>
+          {/* Tab Switcher */}
+          <View style={styles.tabBar}>
+            <TouchableOpacity
+              style={[styles.tabButton, activeTab === 'orderSummary' && styles.activeTabButton]}
+              onPress={() => setActiveTab('orderSummary')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.tabText, activeTab === 'orderSummary' && styles.activeTabText]}>
+                Order Summary
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabButton, activeTab === 'paymentMethod' && styles.activeTabButton]}
+              onPress={() => {
+                if (!address.trim()) {
+                  alert('Please enter a delivery address first.');
+                  return;
+                }
+                setActiveTab('paymentMethod');
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.tabText, activeTab === 'paymentMethod' && styles.activeTabText]}>
+                Payment
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-      {/* Tab Content with KeyboardAvoidingView */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-      >
-        {activeTab === 'orderSummary' ? (
-          <OrderSummary
-            product={product}
-            quantity={quantity}
-            setQuantity={setQuantity}
-            address={address}
-            setAddress={setAddress}
-            outlet={outlet}
-          />
-        ) : (
-          <PaymentMethod
-            product={product}
-            quantity={quantity}
-            address={address}
-            orderIds={extractOrderIds()}
-          />
-        )}
-      </KeyboardAvoidingView>
-    </View>
-  </View>
-</Modal>
-
+          {/* Tab Content with KeyboardAvoidingView */}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.tabContentContainer}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          >
+            {activeTab === 'orderSummary' ? (
+              <OrderSummary
+                product={product}
+                quantity={quantity}
+                setQuantity={setQuantity}
+                address={address}
+                setAddress={setAddress}
+                outlet={outlet}
+                onProceedToPayment={handleProceedToPayment}
+              />
+            ) : (
+              <PaymentMethod
+                products={Array.isArray((product as any)?.products) ? (product as any).products : [product]}
+                quantity={quantity}
+                address={address}
+                orderIds={extractOrderIds()}
+              />
+            )}
+          </KeyboardAvoidingView>
+        </View>
+      </SafeAreaView>
+    </Modal>
   );
 };
 
+export default OrderModal
+
 const styles = StyleSheet.create({
-  overlay: {
+  container: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    justifyContent: 'center',
-    paddingHorizontal: 10,
+    backgroundColor: '#2d3748',
   },
   modalContainer: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
+    backgroundColor: '#f7fafc',
     flex: 1,
-    width: '95%',
-    alignSelf: 'center',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     overflow: 'hidden',
   },
   header: {
-    backgroundColor: 'white',
+    backgroundColor: '#2d3748',
     paddingVertical: 20,
     paddingHorizontal: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e1e4e8',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
-    color: '#2d3748',
+    color: '#fff',
   },
   closeButton: {
     position: 'absolute',
     right: 16,
-    top: '60%',
-    marginTop: -5,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 20,
     padding: 8,
     zIndex: 10,
@@ -153,28 +180,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: 'white',
     borderBottomWidth: 1,
-    borderBottomColor: '#e1e4e8',
+    borderBottomColor: '#e2e8f0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 16,
     alignItems: 'center',
+    backgroundColor: 'white',
   },
   activeTabButton: {
     borderBottomWidth: 3,
     borderBottomColor: '#10b981',
+    backgroundColor: '#f0fdf4',
   },
   tabText: {
     fontSize: 16,
+    fontWeight: '500',
     color: '#718096',
   },
   activeTabText: {
     color: '#10b981',
     fontWeight: '700',
   },
-  tabContent: {
+  tabContentContainer: {
     flex: 1,
+    backgroundColor: '#f7fafc',
   },
 });
-
-export default OrderModal;

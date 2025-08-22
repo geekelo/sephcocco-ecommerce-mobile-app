@@ -31,7 +31,7 @@ import OrderModal from "@/components/order/orderModal";
 
 const width = Dimensions.get("window").width;
 
-export default function ProductDetail() {
+function ProductDetail() {
   const { id } = useLocalSearchParams();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? "light"];
@@ -282,7 +282,7 @@ export default function ProductDetail() {
   );
 }
 
-
+export default ProductDetail
 
 const styles = StyleSheet.create({
   container: {

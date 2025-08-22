@@ -4,22 +4,19 @@ import {
   Text,
   TouchableOpacity,
   FlatList,
-  Modal,
   StyleSheet,
   Dimensions,
 } from "react-native";
 import { router, useNavigation } from "expo-router";
-import OrderModal from "@/components/order/orderModal";
-import SimilarProducts from "@/components/products/similarProducts";
 import { Feather } from "@expo/vector-icons";
-import { getSimilarOrderProducts, orders } from "../common/orderData";
+import { getSimilarOrderProducts } from "../common/orderData";
 import { Order, SimilarProduct } from "../types/types";
 import { OrderItem } from "./orderItem";
-import { DeliveryItem } from "./deliveriItem";
 import { useOutlet } from "@/context/outletContext";
-import { useGetAllOrders, useGetPaidOrders, useGetPendingOrders } from "@/mutation/useOrders";
+import { useGetPendingOrders, useGetPaidOrders } from "@/mutation/useOrders";
 import { getUser } from "@/lib/tokenStorage";
 import { DeliveryOrderItem } from "./deliverOrderItem";
+import OrderModal from "./orderModal";
 
 const { width } = Dimensions.get("window");
 
@@ -29,7 +26,6 @@ const PendingOrders = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState<"Unpaid" | "InDelivery">("Unpaid");
   const [selectedOrders, setSelectedOrders] = useState<Order[]>([]);
-
   const [showOrderModal, setShowOrderModal] = useState(false);
 
   useEffect(() => {
@@ -50,108 +46,114 @@ const PendingOrders = () => {
 
   const unpaidOrders = unpaidOrdersData ?? [];
   const inDeliveryOrders = deliveryOrdersData ?? [];
-console.log('unpaid',unpaidOrders)
-console.log('del',inDeliveryOrders)
-  const displayedOrders =
-    selectedTab === "Unpaid" ? unpaidOrders : inDeliveryOrders;
 
-  const isLoading =
-    selectedTab === "Unpaid" ? loadingUnpaid : loadingDelivery;
-
-  const error =
-    selectedTab === "Unpaid" ? unpaidError : deliveryError;
-
+  const displayedOrders = selectedTab === "Unpaid" ? unpaidOrders : inDeliveryOrders;
+  const isLoading = selectedTab === "Unpaid" ? loadingUnpaid : loadingDelivery;
+  const error = selectedTab === "Unpaid" ? unpaidError : deliveryError;
   const isButtonEnabled = selectedOrders.length > 0;
 
-const similarDiscountProducts: SimilarProduct[] =
-  selectedOrders.length > 0
-    ? selectedOrders.flatMap(getSimilarOrderProducts)
-    : [];
-
+  const similarDiscountProducts: SimilarProduct[] =
+    selectedOrders.length > 0
+      ? selectedOrders.flatMap(getSimilarOrderProducts)
+      : [];
 
   const handleOrderClick = (order: Order) => {
-  const exists = selectedOrders.some((o) => o.id === order.id);
+    const exists = selectedOrders.some((o) => o.id === order.id);
 
-  if (exists) {
-    setSelectedOrders((prev) => prev.filter((o) => o.id !== order.id));
-  } else {
-    setSelectedOrders((prev) => [...prev, order]);
-  }
-};
-
-  const handleBack = () => navigation.goBack();
-  const handleButtonPress = () => setShowOrderModal(true); 
-const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
-  const product = item.product || {};
-
-  const mainImageUrl =
-    typeof product.main_image_url === "string" &&
-    product.main_image_url.startsWith("http")
-      ? product.main_image_url
-      : undefined;
-
-  const transformedOrder = {
-    ...item,
-    name: product.name,
-    price: parseFloat(item.unit_price),
-    image: mainImageUrl
-      ? { uri: mainImageUrl }
-      : require("@/assets/images/logo.png"),
-    products: [
-      {
-        id: product.id,
-        name: product.name,
-        price: parseFloat(item.unit_price),
-        quantity: item.quantity,
-        main_image_url: mainImageUrl,
-      },
-    ],
+    if (exists) {
+      setSelectedOrders((prev) => prev.filter((o) => o.id !== order.id));
+    } else {
+      setSelectedOrders((prev) => [...prev, order]);
+    }
   };
 
-  if (selectedTab === "Unpaid") {
-    return (
-      <OrderItem
-        order={transformedOrder}
-        index={index}
-        checked={selectedOrders.some((o) => o.id === item.id)}
+  const handleBack = () => navigation.goBack();
+  
+  const handleButtonPress = () => {
+    if (selectedOrders.length === 0) {
+      alert("Please select at least one order to proceed with payment.");
+      return;
+    }
+    setShowOrderModal(true);
+  };
 
-        onpress={() => handleOrderClick(transformedOrder)}
-        userId={userId ?? ""}
-        outlet={activeOutlet ?? ""}
-      />
-    );
-  } else {
-    return (
-      <DeliveryOrderItem
-        order={transformedOrder}
-        index={index}
-        isSelected={selectedOrders.some((o) => o.id === item.id)}
-        onClick={() => handleOrderClick(transformedOrder)}
-        onSeeMorePress={() =>
-          router.push({
-            pathname: "/order/[id]",
-            params: { id: item.id },
-          })
-        }
-      />
-    );
-  }
-};
+  const handleCloseModal = () => {
+    setShowOrderModal(false);
+    // Optionally reset selected orders after successful payment
+    // setSelectedOrders([]);
+  };
 
+  const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
+    const product = item.product || {};
+
+    const mainImageUrl =
+      typeof product.main_image_url === "string" &&
+      product.main_image_url.startsWith("http")
+        ? product.main_image_url
+        : undefined;
+
+    const transformedOrder = {
+      ...item,
+      name: product.name,
+      price: parseFloat(item.unit_price),
+      image: mainImageUrl
+        ? { uri: mainImageUrl }
+        : require("@/assets/images/logo.png"),
+      products: [
+        {
+          id: product.id,
+          name: product.name,
+          price: parseFloat(item.unit_price),
+          quantity: item.quantity,
+          main_image_url: mainImageUrl,
+        },
+      ],
+    };
+
+    if (selectedTab === "Unpaid") {
+      return (
+        <OrderItem
+          order={transformedOrder}
+          index={index}
+          checked={selectedOrders.some((o) => o.id === item.id)}
+          onpress={() => handleOrderClick(transformedOrder)}
+          userId={userId ?? ""}
+          outlet={activeOutlet ?? ""}
+        />
+      );
+    } else {
+      return (
+        <DeliveryOrderItem
+          order={transformedOrder}
+          index={index}
+          isSelected={selectedOrders.some((o) => o.id === item.id)}
+          onClick={() => handleOrderClick(transformedOrder)}
+          onSeeMorePress={() =>
+            router.push({
+              pathname: "/order/[id]",
+              params: { id: item.id },
+            })
+          }
+        />
+      );
+    }
+  };
 
   if (isLoading) {
-    return <Text style={styles.actionBtnText}>Loading orders...</Text>;
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Text style={styles.loadingText}>Loading orders...</Text>
+      </View>
+    );
   }
 
   if (error) {
     return (
-      <Text style={[styles.activeTabText, { color: "red" }]}>
-        Failed to fetch orders.
-      </Text>
+      <View style={[styles.container, styles.centerContent]}>
+        <Text style={[styles.errorText]}>Failed to fetch orders.</Text>
+      </View>
     );
   }
-
-  console.log('selected',selectedOrders)
 
   return (
     <View style={styles.container}>
@@ -170,10 +172,10 @@ const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
             key={tab}
             style={[styles.tab, selectedTab === tab && styles.activeTab]}
             onPress={() => {
-  setSelectedTab(tab as "Unpaid" | "InDelivery");
-  setSelectedOrders([]); // reset selection
-}}
-
+              setSelectedTab(tab as "Unpaid" | "InDelivery");
+              setSelectedOrders([]); // reset selection
+            }}
+            activeOpacity={0.7}
           >
             <Text
               style={[
@@ -195,8 +197,12 @@ const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderOrderItem}
         contentContainerStyle={styles.orderList}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={() => (
-          <Text style={styles.noOrdersText}>No orders in this category.</Text>
+          <View style={styles.emptyContainer}>
+            <Feather name="inbox" size={48} color="#a0aec0" />
+            <Text style={styles.noOrdersText}>No orders in this category.</Text>
+          </View>
         )}
       />
 
@@ -204,15 +210,18 @@ const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
       {selectedTab === "Unpaid" && (
         <View style={styles.selectedOrderFooter}>
           <Text style={styles.selectedOrderText}>
-          {selectedOrders.length > 0
-  ? `${selectedOrders.length} order(s) selected`
-  : "No order selected"}
-
+            {selectedOrders.length > 0
+              ? `${selectedOrders.length} order(s) selected`
+              : "Select orders to make payment"}
           </Text>
           <TouchableOpacity
-            style={[styles.actionBtn, !isButtonEnabled && styles.disabledBtn]}
-           
+            style={[
+              styles.actionBtn, 
+              !isButtonEnabled && styles.disabledBtn
+            ]}
             onPress={handleButtonPress}
+            disabled={!isButtonEnabled}
+            activeOpacity={0.8}
           >
             <Feather name="credit-card" size={20} color="#fff" />
             <Text style={styles.actionBtnText}>Make Payment</Text>
@@ -220,26 +229,22 @@ const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
         </View>
       )}
 
-    
-
       {/* Order Modal */}
-      <Modal
-        visible={showOrderModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowOrderModal(false)}
-      >
-       <OrderModal
-  visible={true}
-  product={selectedOrders[0] as any} // or handle multiple if supported
-  onClose={() => setShowOrderModal(false)}
-  outlet={activeOutlet ?? ""}
-/>
-
-      </Modal>
+      {showOrderModal && selectedOrders.length > 0 && (
+        <OrderModal
+          visible={showOrderModal}
+          product={selectedOrders[0] as any} // Handle first selected order
+          onClose={handleCloseModal}
+          outlet={activeOutlet ?? ""}
+        />
+      )}
     </View>
   );
 };
+
+
+export default PendingOrders
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -247,12 +252,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 20,
   },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     position: "relative",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
+    paddingVertical: 8,
   },
   backBtn: {
     position: "absolute",
@@ -271,70 +281,105 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     marginBottom: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 4,
+    marginHorizontal: 8,
   },
   tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 24,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-    marginHorizontal: 12,
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   activeTab: {
-    borderBottomColor: "#32CD32", // lime green
+    backgroundColor: "#32CD32",
   },
   tabText: {
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: '500',
     color: "#666",
+    textAlign: 'center',
   },
   activeTabText: {
-    color: "#32CD32",
+    color: "#fff",
     fontWeight: "700",
   },
   orderList: {
-    paddingBottom: 12,
+    paddingBottom: 120, // Space for footer
+    flexGrow: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 80,
   },
   noOrdersText: {
     textAlign: "center",
     fontSize: 16,
     color: "#666",
     fontStyle: "italic",
-    marginTop: 48,
+    marginTop: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#e53e3e",
+    textAlign: 'center',
   },
   selectedOrderFooter: {
-    marginTop: 16,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 6,
-    alignItems: "center",
+    paddingVertical: 16,
+    paddingBottom: 32,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   selectedOrderText: {
-    fontSize: 16,
-    paddingVertical: 18,
+    fontSize: 14,
     color: "#333",
+    textAlign: 'center',
+    marginBottom: 12,
+    fontWeight: '500',
   },
   actionBtn: {
     backgroundColor: "#32CD32",
-    paddingVertical: 12,
-    paddingHorizontal: 40,
-    borderRadius: 6,
-    width: "100%",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   disabledBtn: {
     backgroundColor: "#a5d6a7",
+    elevation: 1,
+    shadowOpacity: 0.1,
   },
   actionBtnText: {
     color: "#fff",
     fontWeight: "700",
     fontSize: 16,
-    textAlign: "center",
-  },
-  similarDiscountsContainer: {
-    marginTop: 32,
   },
 });
-
-export default PendingOrders;

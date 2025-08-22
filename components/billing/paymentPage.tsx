@@ -1,3 +1,4 @@
+// PaymentHistoryScreen.tsx
 import React, { useState } from "react";
 import {
   View,
@@ -10,18 +11,29 @@ import {
 import { MobilePaymentHistoryCard } from "./paymentHistory";
 import { useOutlet } from "@/context/outletContext";
 import { useFetchPayments } from "@/mutation/usePayment";
-
 export const PaymentHistoryScreen = () => {
   const { activeOutlet } = useOutlet();
-  const [statusFilter, setStatusFilter] = useState<string | undefined>();
 
   const { data, isLoading, error } = useFetchPayments({
     outlet: activeOutlet ?? "",
-    status: statusFilter,
   });
-console.log(data)
-  const payments = data?.data ?? [];
-  const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+
+  // Keep all payments in state
+  const payments = (data?.payments ?? []).map((p: any) => ({
+    date: p.created_at,
+    status: p.status,
+    amount: Number(p.amount) || 0,
+    reference: p.transaction_id,
+    orderNumber: p.orders?.[0] ?? "—",
+    paymentMethod: p.payment_method ?? "—",
+  }));
+
+  // ✅ Always sort descending (newest first)
+  const sortedPayments = payments.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
+  const totalAmount = sortedPayments.reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -39,44 +51,48 @@ console.log(data)
           Failed to load payments
         </Text>
       ) : (
-        <MobilePaymentHistoryCard
-          payments={payments}
-          onStatusFilterChange={setStatusFilter}
-        />
+       
+        <MobilePaymentHistoryCard payments={sortedPayments} />
       )}
     </SafeAreaView>
   );
 };
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f4f4f4",
+    backgroundColor: "#fafafa",
     paddingHorizontal: 16,
     paddingTop: 24,
   },
   heading: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "700",
-    color: "#333",
+    color: "#202020",
     textAlign: "center",
     marginBottom: 20,
   },
   summaryBox: {
-    backgroundColor: "#e0f2f1",
-    borderRadius: 10,
+    backgroundColor: "#e8f5e9",
+    borderRadius: 12,
     padding: 16,
     marginBottom: 20,
     flexDirection: "row",
     justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   summaryLabel: {
     fontSize: 16,
-    color: "#333",
+    color: "#555",
   },
   summaryAmount: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#2e7d32",
   },
 });
