@@ -1,5 +1,5 @@
 // mutation/usePayment.ts
-import { iHavePaid, fetchPayments } from "@/services/payment";
+import { iHavePaid, fetchPayments, verifyPayment } from "@/services/payment";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 type PaymentPayload = {
@@ -10,6 +10,11 @@ type PaymentPayload = {
   transactionId: string;
 };
 
+type VerifyPaymentPayload = {
+  outlet: string;
+  reference: string;
+};
+
 type FetchPaymentsParams = {
   outlet: string;
   status?: string;
@@ -17,7 +22,7 @@ type FetchPaymentsParams = {
   perPage?: number;
 };
 
-type Payment = {
+export type Payment = {
   id: string;
   amount: number;
   payment_method: string;
@@ -26,13 +31,14 @@ type Payment = {
   created_at: string;
 };
 
-type PaymentsResponse = {
-  data: Payment[];
+export type PaymentsResponse = {
+  payments: Payment[];
   total: number;
   page: number;
   per_page: number;
 };
 
+// ✅ Create Payment Mutation
 export const usePayment = () => {
   return useMutation({
     mutationFn: ({
@@ -46,6 +52,15 @@ export const usePayment = () => {
   });
 };
 
+// ✅ Verify Payment Mutation
+export const useVerifyPayment = () => {
+  return useMutation({
+    mutationFn: ({ outlet, reference }: VerifyPaymentPayload) =>
+      verifyPayment(outlet, reference),
+  });
+};
+
+// ✅ Fetch Payments Query
 export const useFetchPayments = ({
   outlet,
   status,
