@@ -8,13 +8,12 @@ import {
   Modal,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useNavigation } from "expo-router";
+import { useNavigation, useRouter } from "expo-router";
 import { useOutlet } from "@/context/outletContext";
 import { useGetCompletedOrders } from "@/mutation/useOrders";
 import { getUser } from "@/lib/tokenStorage";
 import SimilarProducts from "@/components/products/similarProducts";
 import OrderModal from "@/components/order/orderModal";
-import { getSimilarOrderProducts } from "../common/orderData";
 import { Order } from "@/types/order";
 import { DeliveryOrderItem } from "./deliverOrderItem";
 
@@ -34,34 +33,35 @@ const CompletedOrders = () => {
     isLoading,
     error,
   } = useGetCompletedOrders(activeOutlet ?? "", userId);
-console.log(completedOrders)
+  const router = useRouter()
+console.log('compleyr',completedOrders)
+const orderIds = completedOrders?.map(order => order);
+console.log("Order IDs:", orderIds);
+
   const handleBack = () => navigation.goBack();
   const handleOrderClick = (order: Order) => setCurrentOrder(order);
-
-  const similarDiscountProducts: any[] = currentOrder
-    ? getSimilarOrderProducts(currentOrder)
-    : [];
-
-  const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
-    const transformedOrder = {
-      ...item,
-      name: item.product?.name,
-      price: parseFloat(item.unit_price),
-      image: item.product?.main_image_url
-        ? item.product.main_image_url
-        : "", // Handled in DeliveryOrderItem
-    };
-
-    return (
-      <DeliveryOrderItem
-        order={transformedOrder}
-        index={index}
-        isSelected={currentOrder?.id === item.id}
-        onClick={() => handleOrderClick(transformedOrder)}
-        onSeeMorePress={() => setShowOrderModal(true)}
-      />
-    );
+const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
+  const transformedOrder = {
+    ...item,
+    name: item.product?.name,
+    price: parseFloat(item.unit_price),
+    image: item.product?.main_image_url ?? "",
   };
+
+  return (
+    <DeliveryOrderItem
+      order={transformedOrder}
+      index={index}
+      isSelected={currentOrder?.id === item.id}
+      // 👇 Pass the *raw item* to currentOrder (not transformedOrder)
+      onClick={() => handleOrderClick(item)}
+      onSeeMorePress={() => {
+        router.push(`/order/${item.id}`); 
+      }}
+    />
+  );
+};
+
 
   return (
     <View style={styles.container}>
@@ -90,16 +90,7 @@ console.log(completedOrders)
         />
       )}
 
-      {/* Similar Discounts */}
-      {similarDiscountProducts.length > 0 && (
-        <View style={styles.similarDiscountsContainer}>
-          <SimilarProducts
-            similar={similarDiscountProducts}
-            onProductPress={(id) => navigation.navigate("product", { id })}
-            title="Similar Discounts"
-          />
-        </View>
-      )}
+   
 
       {/* Order Modal */}
       <Modal
@@ -110,7 +101,7 @@ console.log(completedOrders)
       >
         <OrderModal
           visible={true}
-          product={currentOrder as any}
+         orders={currentOrder ? [currentOrder] : []}  
           onClose={() => setShowOrderModal(false)}
           outlet={activeOutlet ?? ""}
         />

@@ -45,7 +45,6 @@ export default function SigninScreen() {
     );
   };
 
-console.log(data)
   return (
     <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.imageWrapper}>

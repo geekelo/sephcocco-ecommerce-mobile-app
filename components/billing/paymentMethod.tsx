@@ -1,3 +1,4 @@
+// PaymentMethod.tsx
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -9,40 +10,55 @@ import {
   Alert,
   Modal,
   SafeAreaView,
+  Animated,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { WebView } from 'react-native-webview';
+import { WebView } from "react-native-webview";
 import PaymentModal from "../modal/payment";
 import { SuccessModal } from "../modal/sucess";
 import { router } from "expo-router";
-import { usePayment, useVerifyPayment } from "@/mutation/usePayment";
+import { usePayment, useVerifyPayment, usePaystackPayment } from "@/mutation/usePayment";
 import { getUser } from "@/lib/tokenStorage";
 import { useOutlet } from "@/context/outletContext";
 
 type PaymentMethodProps = {
   address: string;
-  products: { price: number; name?: string }[];
+  products: { price: number; name?: string, id:string }[];
   quantity: number;
   orderIds: string[];
 };
+
+type PaymentStep = 'select' | 'processing' | 'complete';
 
 export default function PaymentMethod({
   address,
   products,
   quantity,
-  orderIds = [],
+  orderIds = products.map((p) => p.id),
 }: PaymentMethodProps) {
   const [paymentMethod, setPaymentMethod] = useState<"bank" | "online" | null>(null);
+  const [paymentRef, setPaymentRef] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<PaymentStep>('select');
   const [showModal, setShowModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showPaystackModal, setShowPaystackModal] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [paymentUrl, setPaymentUrl] = useState<string>("");
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(50));
 
   const { activeOutlet } = useOutlet();
   const { mutate: submitPayment, isPending: isSubmitting } = usePayment();
-  const { mutate: verifyPayment } = useVerifyPayment();
+  const { mutate: verifyPayment, data: verifydata } = useVerifyPayment();
+  const {
+    mutate: initPaystackPayment,
+    isPending: isInitializing,
+    data,
+    isError,
+    error,
+  } = usePaystackPayment();
 
+  const derivedOrderIds = orderIds.length ? orderIds : products.map((p) => p.id);
   const itemTotal = products.reduce((sum, p) => sum + (p?.price || 0) * quantity, 0);
   const totalCost = itemTotal;
 
@@ -54,276 +70,446 @@ export default function PaymentMethod({
     fetchUser();
   }, []);
 
-  const handleBankTransfer = () => setPaymentMethod("bank");
-  const handleOnlinePayment = () => setPaymentMethod("online");
+  // Animate components on mount
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const handlePaymentMethodSelect = (method: "bank" | "online") => {
+    setPaymentMethod(method);
+    
+    // Animate selection feedback
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 0.7,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const handleBankPaymentConfirm = () => {
-    if (!activeOutlet || !orderIds.length) {
+    setCurrentStep('processing');
+
+    if (!activeOutlet || !derivedOrderIds) {
       Alert.alert("Error", "Missing outlet or order information.");
+      setCurrentStep('select');
       return;
     }
 
     submitPayment(
       {
         outlet: activeOutlet,
-        orderIds,
+        orderIds: derivedOrderIds,
         amount: totalCost,
         paymentMethod: "bank_transfer",
         transactionId: user?.payment_ref,
       },
       {
-        onSuccess: () => {
+        onSuccess: (res) => {
+          setCurrentStep('complete');
           setShowModal(false);
-          setTimeout(() => setShowSuccessModal(true), 300);
+          setTimeout(() => setShowSuccessModal(true), 500);
         },
-        onError: () => {
-          Alert.alert("Payment Failed", "Please try again or contact support.");
+        onError: (err) => {
+          console.error("❌ Bank Payment Failed:", err);
+          setCurrentStep('select');
+          Alert.alert(
+            "Payment Failed", 
+            "We couldn't process your payment. Please check your details and try again.",
+            [{ text: "OK", style: "default" }]
+          );
         },
       }
     );
   };
 
-  // Initialize Paystack payment
-  const initializePaystackPayment = async () => {
-    try {
-      // Generate a unique reference
-      const reference = `ref_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      const response = await fetch('https://api.paystack.co/transaction/initialize', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer sk_live_3aec19cabd9dd45b64cca73e48bc5d4733b5ff4b`, // Your secret key (replace with actual)
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: user?.email,
-          amount: totalCost * 100, // Amount in kobo
-          currency: 'NGN',
-          reference: reference,
-          callback_url: 'https://standard.paystack.co/close', // Standard Paystack callback
-          metadata: {
-            custom_fields: [
-              {
-                display_name: "Order IDs",
-                variable_name: "order_ids",
-                value: orderIds.join(',')
-              }
-            ]
-          }
-        }),
-      });
+  const initializePaystackPayment = () => {
+    setCurrentStep('processing');
 
-      const data = await response.json();
-      console.log('Paystack response:', data); // For debugging
-      
-      if (data.status && data.data?.authorization_url) {
-        setPaymentUrl(data.data.authorization_url);
-        setShowPaystackModal(true);
-      } else {
-        Alert.alert("Error", `Failed to initialize payment: ${data.message || 'Unknown error'}`);
-        console.error('Paystack error:', data);
-      }
-    } catch (error) {
-      Alert.alert("Error", "Network error. Please check your connection.");
-      console.error("Payment initialization error:", error);
+    if (!activeOutlet) {
+      Alert.alert("Error", "Missing outlet or order information.");
+      setCurrentStep('select');
+      return;
     }
+
+    if (!user?.email) {
+      Alert.alert("Email Required", "We need your email address to process the payment securely.");
+      setCurrentStep('select');
+      return;
+    }
+
+    initPaystackPayment(
+      {
+        outlet: activeOutlet,
+        orderIds: derivedOrderIds,
+        amount: totalCost,
+        paymentMethod: "online",
+        transactionId: user?.payment_ref,
+      },
+      {
+        onSuccess: (res: any) => {
+          const authUrl = res?.data?.data?.authorization_url;
+          const reference = res?.data?.data?.reference;
+
+          if (authUrl && reference) {
+            setPaymentUrl(authUrl);
+            setPaymentRef(reference);
+            setShowPaystackModal(true);
+          } else {
+            console.error("⚠️ Missing Paystack data", res);
+            setCurrentStep('select');
+            Alert.alert("Error", "Unable to initialize payment. Please try again.");
+          }
+        },
+        onError: (err) => {
+          console.error("❌ Paystack Init Failed:", err);
+          setCurrentStep('select');
+          Alert.alert("Connection Error", "Unable to connect to payment service. Please check your internet connection and try again.");
+        },
+      }
+    );
   };
 
   const handleCheckoutPress = () => {
     if (!paymentMethod) {
-      Alert.alert("Payment Method Required", "Please select a payment method to proceed.");
+      Alert.alert(
+        "Select Payment Method", 
+        "Please choose how you'd like to pay before proceeding.",
+        [{ text: "OK", style: "default" }]
+      );
+      return;
+    }
+
+    if (!address.trim()) {
+      Alert.alert(
+        "Delivery Address Required", 
+        "Please provide a delivery address to complete your order.",
+        [{ text: "OK", style: "default" }]
+      );
       return;
     }
 
     if (paymentMethod === "bank") {
       setShowModal(true);
     } else if (paymentMethod === "online") {
-      if (!user?.email) {
-        Alert.alert("Email Required", "User email is required for online payment.");
-        return;
-      }
       initializePaystackPayment();
     }
   };
 
-  // Handle WebView navigation state changes
   const handleWebViewNavigationStateChange = (navState: any) => {
     const { url } = navState;
-    console.log('WebView URL:', url); // For debugging
-    
-    // Check if payment was completed (Paystack redirects to close page)
-    if (url.includes('standard.paystack.co/close')) {
-      // Extract reference from URL
-      try {
-        const urlParams = new URLSearchParams(url.split('?')[1] || '');
-        const reference = urlParams.get('reference') || urlParams.get('trxref');
-        
-        setShowPaystackModal(false);
-        
-        if (reference) {
-          // Show loading while verifying
-          Alert.alert("Processing", "Verifying payment...");
-          
-          verifyPayment(
-            { outlet: activeOutlet, reference: reference },
-            {
-              onSuccess: (data) => {
-                if (data?.status === "success") {
-                  setShowSuccessModal(true);
-                } else {
-                  Alert.alert("Payment Status", "Payment verification completed but status is unclear. Please contact support if money was deducted.");
-                }
-              },
-              onError: () => {
-                Alert.alert("Verification Error", "Could not verify payment. Please contact support if money was deducted.");
-              },
-            }
-          );
-        } else {
-          Alert.alert("Payment Completed", "Payment window closed. If payment was successful, it will reflect shortly.");
-        }
-      } catch (error) {
-        setShowPaystackModal(false);
-        Alert.alert("Payment Completed", "Payment window closed. If payment was successful, it will reflect shortly.");
-      }
-    }
-    
-    // Handle explicit cancellation
-    if (url.includes('cancelled') || url.includes('cancel')) {
+
+    if (
+      url.includes("paystack.com/close") ||
+      url.includes("success") ||
+      url.includes("your-callback-url.com/callback")
+    ) {
       setShowPaystackModal(false);
-      Alert.alert("Payment Cancelled", "You cancelled the payment process.");
+      setCurrentStep('processing');
+
+      if (!paymentRef) {
+        console.error("⚠️ No reference stored for verification");
+        setCurrentStep('select');
+        return;
+      }
+
+      verifyPayment(
+        {
+          outlet: activeOutlet!,
+          reference: paymentRef,
+        },
+        {
+          onSuccess: (res) => {
+            setCurrentStep('complete');
+            setTimeout(() => setShowSuccessModal(true), 500);
+          },
+          onError: (err) => {
+            console.error("❌ Payment Verification Failed:", err);
+            setCurrentStep('select');
+            Alert.alert(
+              "Verification Error",
+              "We're having trouble confirming your payment. Please contact our support team for assistance."
+            );
+          },
+        }
+      );
+    }
+
+    if (url.includes("cancel")) {
+      setShowPaystackModal(false);
+      setCurrentStep('select');
+      Alert.alert("Payment Cancelled", "You can try again when you're ready.");
     }
   };
 
   const paymentDetails = [
     { label: "Account Number:", value: "1234567890" },
     { label: "Bank Name:", value: "SmartSphere Inc." },
-    { label: "Reference Code:", value: user?.payment_ref ?? "N/A" },
+    { label: "Reference Code:", value: user?.payment_ref ?? "Loading..." },
   ];
 
   const canProceedWithCheckout = paymentMethod && address.trim().length > 0;
+  const isProcessing = currentStep === 'processing' || isSubmitting || isInitializing;
+
+  const renderProgressSteps = () => (
+    <View style={styles.progressContainer}>
+      <View style={styles.progressBar}>
+        <View style={[
+          styles.progressStep,
+          styles.progressStepActive
+        ]}>
+          <MaterialCommunityIcons name="credit-card-outline" size={16} color="#fff" />
+        </View>
+        <View style={[
+          styles.progressLine,
+          currentStep !== 'select' && styles.progressLineActive
+        ]} />
+        <View style={[
+          styles.progressStep,
+          currentStep === 'processing' || currentStep === 'complete' ? styles.progressStepActive : styles.progressStepInactive
+        ]}>
+          {currentStep === 'processing' ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <MaterialCommunityIcons 
+              name={currentStep === 'complete' ? "check" : "clock-outline"} 
+              size={16} 
+              color={currentStep === 'complete' ? "#fff" : "#a0aec0"} 
+            />
+          )}
+        </View>
+        <View style={[
+          styles.progressLine,
+          currentStep === 'complete' && styles.progressLineActive
+        ]} />
+        <View style={[
+          styles.progressStep,
+          currentStep === 'complete' ? styles.progressStepActive : styles.progressStepInactive
+        ]}>
+          <MaterialCommunityIcons 
+            name="check-all" 
+            size={16} 
+            color={currentStep === 'complete' ? "#fff" : "#a0aec0"} 
+          />
+        </View>
+      </View>
+      <View style={styles.progressLabels}>
+        <Text style={styles.progressLabel}>Payment</Text>
+        <Text style={styles.progressLabel}>Processing</Text>
+        <Text style={styles.progressLabel}>Complete</Text>
+      </View>
+    </View>
+  );
+
+  const renderPaymentOption = (
+    method: "bank" | "online",
+    icon: string,
+    title: string,
+    subtitle: string
+  ) => (
+    <TouchableOpacity
+      style={[
+        styles.paymentOption,
+        paymentMethod === method && styles.paymentOptionSelected
+      ]}
+      onPress={() => handlePaymentMethodSelect(method)}
+      activeOpacity={0.7}
+      disabled={isProcessing}
+    >
+      <View style={styles.paymentOptionHeader}>
+        <View style={styles.paymentOptionIcon}>
+          <MaterialCommunityIcons 
+            name={icon as any} 
+            size={24} 
+            color={paymentMethod === method ? "#3182ce" : "#4a5568"} 
+          />
+        </View>
+        <View style={styles.paymentOptionContent}>
+          <Text style={[
+            styles.paymentOptionTitle,
+            paymentMethod === method && styles.paymentOptionTitleSelected
+          ]}>
+            {title}
+          </Text>
+          <Text style={styles.paymentOptionSubtitle}>{subtitle}</Text>
+        </View>
+        {paymentMethod === method && (
+          <MaterialCommunityIcons name="check-circle" size={24} color="#10b981" />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
-    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Payment Options */}
-      <View style={styles.paymentSection}>
-        <Text style={styles.sectionTitle}>Payment Method</Text>
-        <View style={styles.paymentOptions}>
-          {/* Bank */}
-          <TouchableOpacity
-            style={[styles.paymentOption, paymentMethod === "bank" && styles.paymentOptionSelected]}
-            onPress={handleBankTransfer}
-            activeOpacity={0.7}
-          >
-            <View style={styles.paymentOptionInner}>
-              <MaterialCommunityIcons name="bank" size={24} color="#4a5568" />
-              <Text style={styles.paymentOptionLabel}>Bank Transfer</Text>
-              {paymentMethod === "bank" && (
-                <MaterialCommunityIcons name="check-circle" size={20} color="#4299e1" />
-              )}
-            </View>
-          </TouchableOpacity>
-
-          {/* Online */}
-          <TouchableOpacity
-            style={[styles.paymentOption, paymentMethod === "online" && styles.paymentOptionSelected]}
-            onPress={handleOnlinePayment}
-            activeOpacity={0.7}
-          >
-            <View style={styles.paymentOptionInner}>
-              <MaterialCommunityIcons name="credit-card" size={24} color="#4a5568" />
-              <Text style={styles.paymentOptionLabel}>Online Payment</Text>
-              {paymentMethod === "online" && (
-                <MaterialCommunityIcons name="check-circle" size={20} color="#4299e1" />
-              )}
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Order Summary */}
-      <View style={styles.orderTotalSection}>
-        <Text style={styles.sectionTitle}>Order Summary</Text>
-        {products.map((p, idx) => (
-          <View key={idx} style={styles.orderTotalRow}>
-            <Text style={styles.orderTotalLabel}>
-              {p.name ?? `Item ${idx + 1}`} (x{quantity})
-            </Text>
-            <Text style={styles.orderTotalValue}>₦{((p?.price || 0) * quantity).toFixed(2)}</Text>
-          </View>
-        ))}
-        <View style={[styles.orderTotalRow, styles.grandTotal]}>
-          <Text style={styles.grandTotalLabel}>Total</Text>
-          <Text style={styles.grandTotalValue}>₦{totalCost.toFixed(2)}</Text>
-        </View>
-      </View>
-
-      {/* Checkout Button */}
-      <TouchableOpacity
-        style={[styles.checkoutButton, (!canProceedWithCheckout || isSubmitting) && styles.checkoutButtonDisabled]}
-        disabled={!canProceedWithCheckout || isSubmitting}
-        onPress={handleCheckoutPress}
-        activeOpacity={0.8}
+    <Animated.View style={[
+      { flex: 1 },
+      {
+        opacity: fadeAnim,
+        transform: [{ translateY: slideAnim }]
+      }
+    ]}>
+      <ScrollView 
+        contentContainerStyle={styles.container} 
+        showsVerticalScrollIndicator={false}
       >
-        {isSubmitting ? (
-          <ActivityIndicator color="#fff" size="small" />
-        ) : (
-          <Text style={styles.checkoutButtonText}>
-            {!paymentMethod
-              ? "Select Payment Method"
-              : paymentMethod === "bank"
-              ? "Proceed with Bank Transfer"
-              : "Pay Online"}
+        {/* Progress Indicator */}
+        {renderProgressSteps()}
+
+        {/* Payment Method Selection */}
+        <View style={styles.paymentSection}>
+          <Text style={styles.sectionTitle}>Choose Payment Method</Text>
+          <Text style={styles.sectionSubtitle}>
+            Select your preferred way to pay for this order
           </Text>
-        )}
-      </TouchableOpacity>
+          
+          <View style={styles.paymentOptions}>
+            {renderPaymentOption(
+              "bank",
+              "bank-transfer",
+              "Bank Transfer",
+              "Transfer directly from your bank account"
+            )}
+            {renderPaymentOption(
+              "online",
+              "credit-card",
+              "Pay with Card",
+              "Secure online payment with debit/credit card"
+            )}
+          </View>
+        </View>
+
+        {/* Order Summary */}
+        <View style={styles.orderSummarySection}>
+          <Text style={styles.sectionTitle}>Order Summary</Text>
+          <View style={styles.orderSummaryContent}>
+            {products.map((p, idx) => (
+              <View key={idx} style={styles.orderItem}>
+                <View style={styles.orderItemDetails}>
+                  <Text style={styles.orderItemName}>
+                    {p.name ?? `Item ${idx + 1}`}
+                  </Text>
+                  <Text style={styles.orderItemQuantity}>Qty: {quantity}</Text>
+                </View>
+                <Text style={styles.orderItemPrice}>
+                  ₦{((p?.price || 0) * quantity).toLocaleString()}
+                </Text>
+              </View>
+            ))}
+            
+            <View style={styles.orderTotalRow}>
+              <View style={styles.totalContainer}>
+                <Text style={styles.totalLabel}>Total Amount</Text>
+                <Text style={styles.totalValue}>₦{totalCost.toLocaleString()}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Delivery Info */}
+        <View style={styles.deliverySection}>
+          <View style={styles.deliveryHeader}>
+            <MaterialCommunityIcons name="map-marker" size={20} color="#4a5568" />
+            <Text style={styles.deliveryTitle}>Delivery Address</Text>
+          </View>
+          <Text style={styles.deliveryAddress}>{address || "No address provided"}</Text>
+        </View>
+
+        {/* Checkout Button */}
+        <TouchableOpacity
+          style={[
+            styles.checkoutButton,
+            !canProceedWithCheckout && styles.checkoutButtonDisabled,
+            isProcessing && styles.checkoutButtonProcessing
+          ]}
+          disabled={!canProceedWithCheckout || isProcessing}
+          onPress={handleCheckoutPress}
+          activeOpacity={0.8}
+        >
+          <View style={styles.checkoutButtonContent}>
+            {isProcessing ? (
+              <>
+                <ActivityIndicator color="#fff" size="small" style={styles.buttonLoader} />
+                <Text style={styles.checkoutButtonText}>Processing...</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.checkoutButtonText}>
+                  {!paymentMethod
+                    ? "Select Payment Method"
+                    : `Pay ₦${totalCost.toLocaleString()}`}
+                </Text>
+                {paymentMethod && (
+                  <MaterialCommunityIcons name="arrow-right" size={20} color="#fff" />
+                )}
+              </>
+            )}
+          </View>
+        </TouchableOpacity>
+      </ScrollView>
 
       {/* Bank Transfer Modal */}
       <PaymentModal
         visible={showModal}
         onClose={() => setShowModal(false)}
-        title="Make Payment"
+        title="Complete Bank Transfer"
         details={paymentDetails}
         onConfirm={handleBankPaymentConfirm}
         isLoading={isSubmitting}
       />
 
-      {/* Paystack Payment WebView */}
+      {/* Paystack WebView */}
       <Modal 
         visible={showPaystackModal} 
-        animationType="slide"
+        animationType="slide" 
         onRequestClose={() => setShowPaystackModal(false)}
       >
-        <SafeAreaView style={{ flex: 1 }}>
+        <SafeAreaView style={styles.webViewContainer}>
           <View style={styles.webViewHeader}>
             <TouchableOpacity 
-              onPress={() => setShowPaystackModal(false)}
+              onPress={() => setShowPaystackModal(false)} 
               style={styles.closeButton}
             >
-              <MaterialCommunityIcons name="close" size={24} color="#333" />
+              <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Complete Payment</Text>
-            <View style={styles.placeholder} />
+            <Text style={styles.webViewTitle}>Secure Payment</Text>
+            <View style={styles.securityIndicator}>
+              <MaterialCommunityIcons name="shield-check" size={20} color="#10b981" />
+            </View>
           </View>
-          
+
           {paymentUrl ? (
             <WebView
               source={{ uri: paymentUrl }}
               onNavigationStateChange={handleWebViewNavigationStateChange}
               startInLoadingState={true}
               renderLoading={() => (
-                <View style={styles.loadingContainer}>
+                <View style={styles.webViewLoading}>
                   <ActivityIndicator size="large" color="#3182ce" />
-                  <Text>Loading payment...</Text>
+                  <Text style={styles.loadingText}>Loading secure payment...</Text>
                 </View>
               )}
-              javaScriptEnabled={true}
-              domStorageEnabled={true}
             />
           ) : (
-            <View style={styles.loadingContainer}>
+            <View style={styles.webViewLoading}>
               <ActivityIndicator size="large" color="#3182ce" />
-              <Text>Initializing payment...</Text>
+              <Text style={styles.loadingText}>Initializing payment...</Text>
             </View>
           )}
         </SafeAreaView>
@@ -338,54 +524,305 @@ export default function PaymentMethod({
           router.push("/pharmacy");
         }}
       />
-    </ScrollView>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 16, paddingBottom: 40 },
-  paymentSection: { marginBottom: 20, backgroundColor: "white", padding: 24, borderRadius: 12 },
-  sectionTitle: { fontSize: 18, fontWeight: "600", marginBottom: 16, color: "#2d3748" },
-  paymentOptions: { gap: 12 },
-  paymentOption: { borderWidth: 2, borderColor: "#e2e8f0", borderRadius: 12, paddingVertical: 20, paddingHorizontal: 16, backgroundColor: "#fff" },
-  paymentOptionSelected: { borderColor: "#4299e1", backgroundColor: "#ebf8ff" },
-  paymentOptionInner: { flexDirection: "row", alignItems: "center" },
-  paymentOptionLabel: { fontWeight: "500", fontSize: 16, color: "#2d3748", flex: 1, marginLeft: 16 },
-  orderTotalSection: { marginBottom: 32, backgroundColor: "white", padding: 24, borderRadius: 12 },
-  orderTotalRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12, paddingVertical: 4 },
-  orderTotalLabel: { fontSize: 16, color: "#4a5568", flex: 1 },
-  orderTotalValue: { fontSize: 16, fontWeight: "500", color: "#2d3748" },
-  grandTotal: { borderTopWidth: 1, borderTopColor: "#e2e8f0", paddingTop: 16, marginTop: 16 },
-  grandTotalLabel: { fontSize: 20, fontWeight: "600", color: "#2d3748" },
-  grandTotalValue: { fontSize: 20, fontWeight: "600", color: "#10b981" },
-  checkoutButton: { backgroundColor: "#3182ce", borderRadius: 12, paddingVertical: 18, paddingHorizontal: 24, alignItems: "center", justifyContent: "center", minHeight: 56 },
-  checkoutButtonDisabled: { backgroundColor: "#a0aec0" },
-  checkoutButtonText: { color: "white", fontWeight: "600", fontSize: 16, textAlign: "center" },
+  container: {
+    flexGrow: 1,
+    padding: 16,
+    paddingBottom: 40,
+    backgroundColor: '#f8fafc',
+  },
+  
+  // Progress Steps
+  progressContainer: {
+    backgroundColor: 'white',
+    marginBottom: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  progressBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  progressStep: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressStepActive: {
+    backgroundColor: '#3182ce',
+  },
+  progressStepInactive: {
+    backgroundColor: '#e2e8f0',
+  },
+  progressLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: '#e2e8f0',
+    marginHorizontal: 8,
+  },
+  progressLineActive: {
+    backgroundColor: '#3182ce',
+  },
+  progressLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  progressLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    flex: 1,
+    textAlign: 'center',
+  },
+
+  // Payment Section
+  paymentSection: {
+    backgroundColor: 'white',
+    marginBottom: 20,
+    padding: 24,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
+    color: '#1a202c',
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 20,
+  },
+  paymentOptions: {
+    gap: 12,
+  },
+  paymentOption: {
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    padding: 16,
+    backgroundColor: '#fff',
+    transition: 'all 0.2s ease',
+  },
+  paymentOptionSelected: {
+    borderColor: '#3182ce',
+    backgroundColor: '#f0f9ff',
+  },
+  paymentOptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  paymentOptionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  paymentOptionContent: {
+    flex: 1,
+  },
+  paymentOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2d3748',
+    marginBottom: 2,
+  },
+  paymentOptionTitleSelected: {
+    color: '#3182ce',
+  },
+  paymentOptionSubtitle: {
+    fontSize: 13,
+    color: '#64748b',
+  },
+
+  // Order Summary
+  orderSummarySection: {
+    backgroundColor: 'white',
+    marginBottom: 20,
+    padding: 24,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  orderSummaryContent: {
+    gap: 12,
+  },
+  orderItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: 8,
+  },
+  orderItemDetails: {
+    flex: 1,
+  },
+  orderItemName: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#2d3748',
+    marginBottom: 2,
+  },
+  orderItemQuantity: {
+    fontSize: 13,
+    color: '#64748b',
+  },
+  orderItemPrice: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2d3748',
+  },
+  orderTotalRow: {
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    paddingTop: 16,
+    marginTop: 8,
+  },
+  totalContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalLabel: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2d3748',
+  },
+  totalValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#10b981',
+  },
+
+  // Delivery Section
+  deliverySection: {
+    backgroundColor: 'white',
+    marginBottom: 24,
+    padding: 20,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  deliveryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  deliveryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2d3748',
+    marginLeft: 8,
+  },
+  deliveryAddress: {
+    fontSize: 14,
+    color: '#4a5568',
+    lineHeight: 20,
+  },
+
+  // Checkout Button
+  checkoutButton: {
+    backgroundColor: '#3182ce',
+    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    minHeight: 56,
+    elevation: 3,
+    shadowColor: '#3182ce',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  checkoutButtonDisabled: {
+    backgroundColor: '#a0aec0',
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  checkoutButtonProcessing: {
+    backgroundColor: '#2d3748',
+  },
+  checkoutButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkoutButtonText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  buttonLoader: {
+    marginRight: 8,
+  },
+
+  // WebView Styles
+  webViewContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   webViewHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-    backgroundColor: "#fff",
+    borderBottomColor: '#e2e8f0',
+    backgroundColor: '#fff',
   },
   closeButton: {
     padding: 8,
+    borderRadius: 8,
   },
-  headerTitle: {
+  webViewTitle: {
     fontSize: 18,
-    fontWeight: "600",
-    color: "#2d3748",
+    fontWeight: '600',
+    color: '#2d3748',
   },
-  placeholder: {
-    width: 40, // Same as close button width for centering
+  securityIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 12,
   },
-  loadingContainer: {
+  webViewLoading: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     gap: 16,
+    backgroundColor: '#f8fafc',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#4a5568',
+    textAlign: 'center',
   },
 });

@@ -8,12 +8,12 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Product } from '../types/types';
 
 interface OrderSummaryProps {
-  product: Product;
-  quantity: number;
+  products: [];
+  quantity: number; // default quantity if individual product quantity not provided
   setQuantity: (quantity: number) => void;
   address: string;
   setAddress: (address: string) => void;
@@ -22,7 +22,7 @@ interface OrderSummaryProps {
 }
 
 const OrderSummary: React.FC<OrderSummaryProps> = ({
-  product,
+  products,
   quantity,
   setQuantity,
   address,
@@ -30,15 +30,6 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   outlet,
   onProceedToPayment,
 }) => {
-  const increaseQuantity = () => {
-    setQuantity(quantity + 1);
-  };
-
-  const decreaseQuantity = () => {
-    if (quantity > 1) {
-      setQuantity(quantity - 1);
-    }
-  };
 
   const handleProceed = () => {
     if (!address.trim()) {
@@ -48,143 +39,134 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
     onProceedToPayment?.();
   };
 
-  // Calculate totals
-  const productPrice = (product as any)?.price || 0;
-  const subtotal = productPrice * quantity;
-  const deliveryFee = 0; // Add delivery fee logic if needed
+  // Calculate subtotal for all products
+  const subtotal = products.reduce((sum, product) => {
+    const price = (product as any)?.price || 0;
+    const qty = (product as any)?.quantity || quantity;
+    return sum + price * qty;
+  }, 0);
+
+  const deliveryFee = 0; // add logic if needed
   const total = subtotal + deliveryFee;
 
   return (
     <View style={styles.wrapper}>
-      <ScrollView 
+      <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        nestedScrollEnabled={true}
-        bounces={true}
       >
-      {/* Product Details */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Product Details</Text>
-        <View style={styles.productCard}>
-          <Text style={styles.productName}>
-            {(product as any)?.name || 'Product Name'}
-          </Text>
-          <Text style={styles.productDescription}>
-            {(product as any)?.description || 'Product description'}
-          </Text>
-          <Text style={styles.productPrice}>
-            ₦{productPrice.toFixed(2)}
-          </Text>
-        </View>
-      </View>
+        {/* Products */}
+        {/* Products */}
+<View style={styles.section}>
+  <Text style={styles.sectionTitle}>Products</Text>
+  {products.map((product, index) => {
+    const price = (product as any)?.price || 0;
+    const qty = (product as any)?.quantity || quantity;
 
-      {/* Quantity Selector */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quantity</Text>
-        <View style={styles.quantityContainer}>
-          <TouchableOpacity
-            style={[styles.quantityButton, quantity <= 1 && styles.quantityButtonDisabled]}
-            onPress={decreaseQuantity}
-            disabled={quantity <= 1}
-            activeOpacity={0.7}
-          >
-            <Feather name="minus" size={20} color={quantity <= 1 ? '#a0aec0' : '#4a5568'} />
-          </TouchableOpacity>
-          
-          <View style={styles.quantityDisplay}>
-            <Text style={styles.quantityText}>{quantity}</Text>
-          </View>
-          
-          <TouchableOpacity
-            style={styles.quantityButton}
-            onPress={increaseQuantity}
-            activeOpacity={0.7}
-          >
-            <Feather name="plus" size={20} color="#4a5568" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Delivery Address */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          Delivery Address <Text style={styles.required}>*</Text>
+    return (
+      <View key={index} style={styles.productCard}>
+        <Text style={styles.productName}>
+          {(product as any)?.name || 'Product'}
         </Text>
-        <View style={styles.inputContainer}>
-          <MaterialCommunityIcons name="map-marker" size={20} color="#718096" style={styles.inputIcon} />
-          <TextInput
-            style={styles.addressInput}
-            placeholder="Enter your delivery address"
-            placeholderTextColor="#a0aec0"
-            value={address}
-            onChangeText={setAddress}
-            multiline={true}
-            numberOfLines={3}
-            textAlignVertical="top"
-            returnKeyType="done"
-            blurOnSubmit={true}
-            scrollEnabled={true}
-            editable={true}
-            autoCorrect={true}
-            spellCheck={true}
-          />
-        </View>
-        {address.trim().length === 0 && (
-          <Text style={styles.helperText}>
-            Please provide a complete delivery address
-          </Text>
-        )}
-      </View>
+        <Text style={styles.productDescription}>
+          {(product as any)?.description || ''}
+        </Text>
 
-      {/* Outlet Information */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Outlet</Text>
-        <View style={styles.outletContainer}>
-          <MaterialCommunityIcons name="store" size={20} color="#4a5568" />
-          <Text style={styles.outletText}>{outlet || 'No outlet selected'}</Text>
-        </View>
-      </View>
+        {/* Price + Quantity Controls */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.productPrice}> ₦ {Number(price ?? 0).toFixed(2)} x {qty}</Text>
 
-      {/* Order Summary */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Order Summary</Text>
-        <View style={styles.summaryContainer}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Subtotal</Text>
-            <Text style={styles.summaryValue}>₦{subtotal.toFixed(2)}</Text>
-          </View>
-          
-          {deliveryFee > 0 && (
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Delivery Fee</Text>
-              <Text style={styles.summaryValue}>₦{deliveryFee.toFixed(2)}</Text>
+          {/* Quantity Buttons */}
+          <View style={styles.quantityContainer}>
+            <TouchableOpacity
+              style={[styles.quantityButton, qty <= 1 && styles.quantityButtonDisabled]}
+              onPress={() => qty > 1 && setQuantity(qty - 1)}
+              disabled={qty <= 1}
+            >
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2d3748' }}>-</Text>
+            </TouchableOpacity>
+
+            <View style={styles.quantityDisplay}>
+              <Text style={styles.quantityText}>{qty}</Text>
             </View>
-          )}
-          
-          <View style={[styles.summaryRow, styles.totalRow]}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>₦{total.toFixed(2)}</Text>
+
+            <TouchableOpacity
+              style={styles.quantityButton}
+              onPress={() => setQuantity(qty + 1)}
+            >
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2d3748' }}>+</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
+    );
+  })}
+</View>
 
-      {/* Proceed Button */}
-      <TouchableOpacity
-        style={[
-          styles.proceedButton,
-          !address.trim() && styles.proceedButtonDisabled
-        ]}
-        onPress={handleProceed}
-        disabled={!address.trim()}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.proceedButtonText}>
-          Proceed to Payment
-        </Text>
-        <MaterialCommunityIcons name="arrow-right" size={20} color="#fff" />
-      </TouchableOpacity>
+
+        {/* Delivery Address */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            Delivery Address <Text style={styles.required}>*</Text>
+          </Text>
+          <View style={styles.inputContainer}>
+            <MaterialCommunityIcons name="map-marker" size={20} color="#718096" style={styles.inputIcon} />
+            <TextInput
+              style={styles.addressInput}
+              placeholder="Enter your delivery address"
+              placeholderTextColor="#a0aec0"
+              value={address}
+              onChangeText={setAddress}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+          </View>
+          {address.trim().length === 0 && (
+            <Text style={styles.helperText}>Please provide a complete delivery address</Text>
+          )}
+        </View>
+
+        {/* Outlet */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Outlet</Text>
+          <View style={styles.outletContainer}>
+            <MaterialCommunityIcons name="store" size={20} color="#4a5568" />
+            <Text style={styles.outletText}>{outlet || 'No outlet selected'}</Text>
+          </View>
+        </View>
+
+        {/* Order Summary */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Order Summary</Text>
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Subtotal</Text>
+              <Text style={styles.summaryValue}>₦{subtotal.toFixed(2)}</Text>
+            </View>
+            {deliveryFee > 0 && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Delivery Fee</Text>
+                <Text style={styles.summaryValue}>₦{deliveryFee.toFixed(2)}</Text>
+              </View>
+            )}
+            <View style={[styles.summaryRow, styles.totalRow]}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalValue}>₦{total.toFixed(2)}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Proceed */}
+        <TouchableOpacity
+          style={[styles.proceedButton, !address.trim() && styles.proceedButtonDisabled]}
+          onPress={handleProceed}
+          disabled={!address.trim()}
+        >
+          <Text style={styles.proceedButtonText}>Proceed to Payment</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );

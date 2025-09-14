@@ -9,6 +9,7 @@ import {
   getAllPaidOrders,
   getAllPendingOrders,
   getAllCompletedOrders,
+  getAllDeliveringOrders,
 } from "@/services/orders";
 import { Order } from "@/types/order";
 
@@ -43,6 +44,14 @@ export const useGetCompletedOrders = (outlet: string, userId: string | null) => 
   return useQuery<Order[]>({
     queryKey: ["orders", outlet, userId],
     queryFn: () => getAllCompletedOrders(outlet, userId),
+    enabled: !!outlet,
+  });
+};
+
+export const useGetDeliveringOrders = (outlet: string, userId: string | null) => {
+  return useQuery<Order[]>({
+    queryKey: ["orders", outlet, userId],
+    queryFn: () => getAllDeliveringOrders(outlet, userId),
     enabled: !!outlet,
   });
 };

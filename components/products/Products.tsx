@@ -70,28 +70,23 @@ const unlikeMutation = useUnlikeProduct(activeOutlet ?? "");
   };
 
 
-  
-const filteredProducts = products
+  const filteredProducts = products
   ?.filter((item: any) =>
-    item.title.toLowerCase().includes(searchQuery.toLowerCase())
+    item.title?.toLowerCase().includes(searchQuery.toLowerCase() ?? "")
   )
   .filter((item: any) =>
     selectedCategory ? item.category === selectedCategory : true
   )
   .sort((a: any, b: any) => {
-    if (sortOption === "Price: Low to High") {
-      return a.price - b.price;
-    } else if (sortOption === "Price: High to Low") {
-      return b.price - a.price;
-    } else if (sortOption === "Newest First") {
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(); // fallback if createdAt exists
-    } else if (sortOption === "A–Z") {
-      return a.title.localeCompare(b.title);
-    } else if (sortOption === "Z–A") {
-      return b.title.localeCompare(a.title);
-    }
+    if (sortOption === "Price: Low to High") return a.price - b.price;
+    if (sortOption === "Price: High to Low") return b.price - a.price;
+    if (sortOption === "Newest First")
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    if (sortOption === "A–Z") return a.title?.localeCompare(b.title ?? "") ?? 0;
+    if (sortOption === "Z–A") return b.title?.localeCompare(a.title ?? "") ?? 0;
     return 0;
   });
+
 
 
   const numColumns = width > 768 ? 3 : width > 480 ? 2 : 1;

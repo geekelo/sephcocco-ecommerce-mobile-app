@@ -103,6 +103,23 @@ export const getAllCompletedOrders = async (outlet: string, userId: string | nul
 };
 
 
+export const getAllDeliveringOrders = async (outlet: string, userId: string | null) => {
+  const url = `/${outlet}/sephcocco_${outlet}_orders/delivering`;
+  const client = await apiClient();
+
+  try {
+    const { data } = await client.get(url, {
+      params: userId ? { user_id: userId } : {},
+    });
+    console.log("✅ [GET delivered] Response:", data);
+    return data.orders ?? data;
+  } catch (error: any) {
+    console.error("❌ [GET delievred] Error:", error?.response?.data || error.message);
+    throw error;
+  }
+};
+
+
 // ✅ Get All paid Orders
 export const getAllPaidOrders = async (outlet: string, userId: string | null) => {
   const url = `/${outlet}/sephcocco_${outlet}_orders/paid`;
