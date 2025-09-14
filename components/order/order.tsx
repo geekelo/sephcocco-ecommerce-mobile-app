@@ -6,72 +6,61 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  useColorScheme
+  useColorScheme,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Colors } from '@/constants/Colors';
 import { useOutlet } from '@/context/outletContext';
 import { getUser } from '@/lib/tokenStorage';
 import { useGetAllOrders } from '@/mutation/useOrders';
-const orders = [
-  {
-    id: '1',
-    image: require('@/assets/images/logo.png'),
-    title: 'Minimalist Chair',
-    status: 'Pending',
-    deliveryStatus: 'Delivering',
-    amount: '$120.00',
-  },
-  {
-    id: '2',
-    image: require('@/assets/images/logo.png'),
-    title: 'Wooden Table',
-    status: 'Completed',
-    deliveryStatus: 'Delivered',
-    amount: '$340.00',
-  },
-];
 
 const OrdersScreen = () => {
   const [activeTab, setActiveTab] = useState<'Pending' | 'Completed'>('Pending');
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
+  
   const navigation = useNavigation();
   const { activeOutlet } = useOutlet();
-const [userId, setUserId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
-useEffect(() => {
-  getUser().then(user => setUserId(user?.id ?? null));
-}, []);
+  useEffect(() => {
+    getUser().then(user => setUserId(user?.id ?? null));
+  }, []);
 
-const { data: allOrders, isLoading, isError } = useGetAllOrders(activeOutlet ?? "", userId);
-const filteredOrder = (allOrders ?? []).filter((order) =>
-  activeTab === "Pending" ? order.status === "Pending" : order.status === "Completed"
-);
-
-
-console.log(filteredOrder)
-  const filteredOrders = orders.filter(order => 
-    activeTab === 'Pending' ? order.status === 'Pending' : order.status === 'Completed'
+  const { data: allOrders, isLoading, isError } = useGetAllOrders(
+    activeOutlet ?? '',
+    userId
   );
-if (isLoading) {
-  return <Text>Loading orders...</Text>;
-}
 
-if (isError) {
-  return <Text>Error fetching orders.</Text>;
-}
+  const filteredOrders = (allOrders ?? []).filter(order =>
+    activeTab === 'Pending'
+      ? order.status === 'Pending'
+      : order.status === 'Completed'
+  );
+
+  if (isLoading) {
+    return <Text>Loading orders...</Text>;
+  }
+
+  if (isError) {
+    return <Text>Error fetching orders.</Text>;
+  }
 
   return (
     <View style={styles.container}>
       {/* Tabs */}
       <View style={styles.tabs}>
         {['Pending', 'Completed'].map(tab => (
-          <TouchableOpacity key={tab} onPress={() => setActiveTab(tab as 'Pending' | 'Completed')}>
-            <Text style={[
-              styles.tabText,
-              activeTab === tab && { color: theme.orange, fontWeight: 'bold' }
-            ]}>
+          <TouchableOpacity
+            key={tab}
+            onPress={() => setActiveTab(tab as 'Pending' | 'Completed')}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === tab && { color: theme.orange, fontWeight: 'bold' },
+              ]}
+            >
               {tab}
             </Text>
           </TouchableOpacity>
@@ -83,15 +72,27 @@ if (isError) {
         {filteredOrders.map(order => (
           <View key={order.id} style={[styles.card, { borderColor: theme.gray }]}>
             <View style={styles.cardContent}>
-              <Image source={order.image} style={styles.image} />
+              {/* 👇 Show placeholder if no image field in API */}
+              <Image
+                source={
+                  order.image
+                    ? { uri: order.image }
+                    : require('@/assets/images/logo.png')
+                }
+                style={styles.image}
+              />
               <View style={styles.details}>
-                <Text style={styles.title}>{order.title}</Text>
+                <Text style={styles.title}>{order?.name ?? 'Unnamed Order'}</Text>
                 <Text style={styles.status}>Status: {order.status}</Text>
-                <Text style={styles.delivery}>Delivery: {order.deliveryStatus}</Text>
-                <Text style={styles.amount}>Amount: {order.amount}</Text>
-                {/* <TouchableOpacity onPress={() => navigation.navigate('OrderDetails' as never)}> */}
-                  <Text style={[styles.link, { color: theme.orange }]}>See More Details</Text>
-                {/* </TouchableOpacity> */}
+                <Text style={styles.delivery}>
+                  Delivery: {order?.status ?? 'N/A'}
+                </Text>
+                <Text style={styles.amount}>
+                  Amount: {order?.price ? `$${order?.price}` : 'N/A'}
+                </Text>
+                <Text style={[styles.link, { color: theme.orange }]}>
+                  See More Details
+                </Text>
               </View>
             </View>
           </View>
@@ -99,9 +100,15 @@ if (isError) {
 
         {/* Discount Section */}
         <View style={styles.discountSection}>
-          <Text style={styles.discountHeader}>Enjoy Discount on Similar Products</Text>
-          <TouchableOpacity style={[styles.discountBtn, { backgroundColor: theme.orange }]}>
-            <Text style={[styles.discountBtnText, { color: theme.background }]}>View More Deals</Text>
+          <Text style={styles.discountHeader}>
+            Enjoy Discount on Similar Products
+          </Text>
+          <TouchableOpacity
+            style={[styles.discountBtn, { backgroundColor: theme.orange }]}
+          >
+            <Text style={[styles.discountBtnText, { color: theme.background }]}>
+              View More Deals
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -116,7 +123,7 @@ const styles = StyleSheet.create({
   tabs: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 20
+    marginBottom: 20,
   },
   tabText: {
     fontSize: 16,
@@ -130,12 +137,12 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     flexDirection: 'row',
-    gap: 12
+    gap: 12,
   },
   image: {
     width: 70,
     height: 70,
-    borderRadius: 8
+    borderRadius: 8,
   },
   details: {
     flex: 1,
@@ -147,11 +154,11 @@ const styles = StyleSheet.create({
   },
   status: {
     fontSize: 12,
-    color: '#666'
+    color: '#666',
   },
   delivery: {
     fontSize: 12,
-    color: '#999'
+    color: '#999',
   },
   amount: {
     fontWeight: 'bold',
@@ -164,12 +171,12 @@ const styles = StyleSheet.create({
   },
   discountSection: {
     padding: 20,
-    alignItems: 'center'
+    alignItems: 'center',
   },
   discountHeader: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 12
+    marginBottom: 12,
   },
   discountBtn: {
     paddingVertical: 10,
@@ -178,6 +185,6 @@ const styles = StyleSheet.create({
   },
   discountBtnText: {
     fontSize: 14,
-    fontWeight: 'bold'
-  }
+    fontWeight: 'bold',
+  },
 });

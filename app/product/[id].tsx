@@ -27,6 +27,7 @@ import { CustomOutlineButton } from "@/components/ui/CustomOutlineButton";
 import { useProductById, useProducts } from "@/mutation/useProducts";
 import { useCreateOrder } from "@/mutation/useOrders";
 import OrderModal from "@/components/order/orderModal";
+import LoadingSpinner from "@/components/common/loadingSpinner";
 
 
 const width = Dimensions.get("window").width;
@@ -126,12 +127,12 @@ function ProductDetail() {
   }
 
   if (isLoading) {
-    return (
-      <Layout>
-        <ActivityIndicator size="large" color={theme.tint} style={{ marginTop: 40 }} />
-      </Layout>
-    );
-  }
+     return (
+       <Layout>
+         <LoadingSpinner />
+       </Layout>
+     );
+   }
 
   if (isError || !product) {
     return (
@@ -273,7 +274,7 @@ function ProductDetail() {
       </View>
 
       <OrderModal
-        product={product}
+        orders={[product]} 
         visible={orderModalVisible}
         onClose={() => setOrderModalVisible(false)}
         outlet={activeOutlet}

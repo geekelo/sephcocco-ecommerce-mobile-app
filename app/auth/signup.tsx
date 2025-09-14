@@ -17,9 +17,11 @@ import CustomButton from '@/components/ui/CustomButton';
 import { Colors } from '@/constants/Colors';
 import { Link, router } from 'expo-router';
 import { useSignup } from '@/mutation/useAuth';
+import { useRequestEmailConfirmationToken } from '@/mutation/useEmail'; // 👈 import
+import LoadingSpinner from '@/components/common/loadingSpinner';
 
 export default function SignupScreen() {
- const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
 
   const [name, setName] = useState('');
@@ -27,17 +29,17 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
- 
 
   const { mutate: signup, isPending } = useSignup();
+  const { mutate: requestToken, isPending: isRequesting } =
+    useRequestEmailConfirmationToken();
 
   const handleSignup = () => {
-    if (!name || !address || !email || !phoneNumber || !whatsappNumber ) {
+    if (!name || !address || !email || !phoneNumber || !whatsappNumber) {
       Alert.alert('Missing Fields', 'Please fill all required fields.');
       return;
     }
 
-    
     signup(
       {
         name,
@@ -49,8 +51,32 @@ export default function SignupScreen() {
       },
       {
         onSuccess: () => {
-          Alert.alert('Success', 'Account created successfully');
-          router.push('/auth/signIn');
+          Alert.alert(
+            'Success',
+            'Account created successfully. Requesting confirmation email...'
+          );
+
+          // 👇 Request token immediately
+          requestToken(email, {
+            onSuccess: () => {
+              Alert.alert(
+                '📩 Email Sent',
+                'A confirmation token has been sent to your email.'
+              );
+
+              // now route to confirm screen
+              router.push({
+                pathname: '/auth/confirm',
+                params: { email },
+              });
+            },
+            onError: (error: any) => {
+              Alert.alert(
+                '❌ Error',
+                error?.response?.data?.message || 'Failed to send confirmation email'
+              );
+            },
+          });
         },
         onError: (error: any) => {
           Alert.alert(
@@ -62,10 +88,12 @@ export default function SignupScreen() {
     );
   };
 
+  if (isPending || isRequesting) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* KeyboardAvoidingView helps with keyboard overlapping inputs */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
@@ -85,47 +113,37 @@ export default function SignupScreen() {
             Sign Up
           </ThemedText>
           <View style={styles.form}>
-            <InputField
-              label="Name"
-              placeholder="Enter your name"
-              value={name}
-              onChangeText={setName}
-            />
-            <InputField
-              label="Address"
-              placeholder="Enter your address"
-              value={address}
-              onChangeText={setAddress}
-            />
+            <InputField label="Name" value={name} onChangeText={setName} placeholder="Enter your name" />
+            <InputField label="Address" value={address} onChangeText={setAddress} placeholder="Enter your address" />
             <InputField
               label="Email"
-              placeholder="Enter your email"
               value={email}
               onChangeText={setEmail}
+              placeholder="Enter your email"
               keyboardType="email-address"
               autoCapitalize="none"
             />
             <InputField
               label="Phone Number"
-              placeholder="Enter phone number"
               value={phoneNumber}
               onChangeText={setPhoneNumber}
+              placeholder="Enter phone number"
               keyboardType="phone-pad"
             />
             <InputField
               label="WhatsApp Number"
-              placeholder="Enter WhatsApp number"
               value={whatsappNumber}
               onChangeText={setWhatsappNumber}
+              placeholder="Enter WhatsApp number"
               keyboardType="phone-pad"
             />
-           
 
             <CustomButton
-              text={isPending ? 'Signing Up...' : 'Sign Up Now'}
+              text={isPending || isRequesting ? 'Processing...' : 'Sign Up Now'}
               onPress={handleSignup}
-              disabled={isPending}
+              disabled={isPending || isRequesting}
             />
+
             <Text style={[styles.loginText, { color: theme.text }]}>
               Already have an account?{' '}
               <Link style={[styles.loginLink, { color: theme.success }]} href="/auth/signIn">

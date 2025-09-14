@@ -57,6 +57,7 @@ const getImageSource = () => {
 
   return require('@/assets/images/logo.png');
 };
+console.log('ordes', order)
 
   return (
     <Animated.View
