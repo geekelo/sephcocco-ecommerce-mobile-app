@@ -1,9 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, UIManager, LayoutAnimation } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  UIManager,
+  LayoutAnimation,
+} from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 
-// Enable LayoutAnimation on Android
+// ✅ Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -12,13 +21,18 @@ interface MobilePaymentHistoryFilterProps {
   onFilterChange: (filters: { startDate: string; endDate: string; status: string }) => void;
 }
 
-export const MobilePaymentHistoryFilter: React.FC<MobilePaymentHistoryFilterProps> = ({ onFilterChange }) => {
+export const MobilePaymentHistoryFilter: React.FC<MobilePaymentHistoryFilterProps> = ({
+  onFilterChange,
+}) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: '',
     status: '',
   });
+
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
 
   const handleFilterChange = (name: string, value: string) => {
     const updatedFilters = { ...filters, [name]: value };
@@ -37,35 +51,78 @@ export const MobilePaymentHistoryFilter: React.FC<MobilePaymentHistoryFilterProp
     setIsExpanded(!isExpanded);
   };
 
+  const formatDate = (date: Date) => {
+    return date.toISOString().split('T')[0]; // YYYY-MM-DD
+  };
+
   return (
     <View style={styles.container}>
+      {/* Header */}
       <TouchableOpacity style={styles.header} onPress={toggleFilterView}>
         <Text style={styles.title}>Filter Transactions</Text>
-        <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#333" />
+        <Ionicons
+          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color="#333"
+        />
       </TouchableOpacity>
 
+      {/* Expandable Content */}
       {isExpanded && (
         <View style={styles.filterContent}>
-          <View style={styles.filterField}>
-            <Text style={styles.label}>From Date</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="YYYY-MM-DD"
-              value={filters.startDate}
-              onChangeText={(text) => handleFilterChange('startDate', text)}
-            />
+          {/* Date Inputs */}
+          <View style={styles.row}>
+            <TouchableOpacity
+              style={styles.dateInput}
+              onPress={() => setShowStartPicker(true)}
+            >
+              <Ionicons name="calendar-outline" size={18} color="#555" />
+              <Text style={styles.dateText}>
+                {filters.startDate || 'From Date'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.dateInput}
+              onPress={() => setShowEndPicker(true)}
+            >
+              <Ionicons name="calendar-outline" size={18} color="#555" />
+              <Text style={styles.dateText}>
+                {filters.endDate || 'To Date'}
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.filterField}>
-            <Text style={styles.label}>To Date</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="YYYY-MM-DD"
-              value={filters.endDate}
-              onChangeText={(text) => handleFilterChange('endDate', text)}
+          {/* Show Date Pickers */}
+          {showStartPicker && (
+            <DateTimePicker
+              value={filters.startDate ? new Date(filters.startDate) : new Date()}
+              mode="date"
+              display="default"
+              onChange={(event, date) => {
+                setShowStartPicker(false);
+                if (date) {
+                  handleFilterChange('startDate', formatDate(date));
+                }
+              }}
             />
-          </View>
+          )}
 
+          {showEndPicker && (
+            <DateTimePicker
+              value={filters.endDate ? new Date(filters.endDate) : new Date()}
+              mode="date"
+              display="default"
+              onChange={(event, date) => {
+                setShowEndPicker(false);
+                if (date) {
+                  handleFilterChange('endDate', formatDate(date));
+                }
+              }}
+            />
+          )}
+
+          {/* Status Dropdown */}
           <View style={styles.filterField}>
             <Text style={styles.label}>Status</Text>
             <View style={styles.pickerContainer}>
@@ -75,14 +132,16 @@ export const MobilePaymentHistoryFilter: React.FC<MobilePaymentHistoryFilterProp
                 style={styles.picker}
               >
                 <Picker.Item label="All Statuses" value="" />
-                <Picker.Item label="Success" value="success" />
                 <Picker.Item label="Pending" value="pending" />
+                <Picker.Item label="Confirmed" value="confirmed" />
                 <Picker.Item label="Failed" value="failed" />
               </Picker>
             </View>
           </View>
 
+          {/* Buttons */}
           <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
+            <Ionicons name="refresh" size={16} color="#fff" style={{ marginRight: 6 }} />
             <Text style={styles.clearButtonText}>Clear Filters</Text>
           </TouchableOpacity>
         </View>
@@ -94,9 +153,9 @@ export const MobilePaymentHistoryFilter: React.FC<MobilePaymentHistoryFilterProp
 const styles = StyleSheet.create({
   container: {
     margin: 16,
-    padding: 16,
+    padding: 12,
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: 12,
     elevation: 2,
     shadowColor: '#000',
     shadowOpacity: 0.05,
@@ -116,46 +175,58 @@ const styles = StyleSheet.create({
   filterContent: {
     marginTop: 16,
   },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#fafafa',
+    marginRight: 8,
+  },
+  dateText: {
+    marginLeft: 6,
+    fontSize: 14,
+    color: '#555',
+  },
   filterField: {
-    marginBottom: 12,
+    marginBottom: 14,
   },
   label: {
     marginBottom: 6,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
     color: '#555',
   },
-  input: {
-    padding: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    fontSize: 14,
-    backgroundColor: '#fff',
-    color: '#000',
-  },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
+    borderColor: '#ddd',
+    borderRadius: 8,
     overflow: 'hidden',
   },
   picker: {
-    height: 44,
     width: '100%',
+   
   },
   clearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-end',
     marginTop: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
   },
   clearButtonText: {
-    color: '#666',
-    fontWeight: '500',
+    color: '#fff',
+    fontWeight: '600',
     fontSize: 14,
   },
 });

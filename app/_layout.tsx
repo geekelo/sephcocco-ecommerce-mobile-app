@@ -24,12 +24,11 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-         <OutletProvider>
-      <Slot />
-
-      <StatusBar style="auto" />
-      </OutletProvider>
-      </AuthProvider>
+          <OutletProvider>
+            <Slot />
+            <StatusBar style="auto" />
+          </OutletProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

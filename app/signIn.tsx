@@ -7,39 +7,36 @@ import CustomButton from '@/components/ui/CustomButton';
 import { Colors } from '@/constants/Colors';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { getUser } from '@/lib/tokenStorage'; // assumes you have this helper
-import { useLogin } from '@/mutation/useAuth';
+import { useLogin } from '@/hooks/useLogin'; // ✅ Import the mutation hook
 
 export default function SigninScreen() {
-   const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
-  const queryClient = useQueryClient();
 
   const [email, setEmail] = useState('');
-  const { mutate: login, isPending, data } = useLogin();
+  
+
+  const loginMutation = useLogin();
 
   const handleLogin = () => {
-    if (!email) {
-      Alert.alert('Missing Fields', 'Please enter your email.');
+    if (!email ) {
+      Alert.alert('Missing Fields', 'Please enter email');
       return;
     }
 
-    login(
+    loginMutation.mutate(
       { email },
       {
-        onSuccess: async () => {
-          Alert.alert('Success', 'User logged in successfully.');
-          const currentUser = await getUser();
-          console.log(currentUser)
-          queryClient.invalidateQueries({ queryKey: ['products', currentUser?.id] });
-          router.push('/ProductPage');
+        onSuccess: (data) => {
+          const { user, token } = data;
+          console.log('Login successful:', user, token);
+           Alert.alert('User Logged in Successfully');
+          router.push('/storeSelection');
         },
         onError: (error: any) => {
-          Alert.alert(
-            'Login Failed',
-            error?.response?.data?.message || 'Something went wrong.'
-          );
+          console.error(error);
+          console.log(error)
+          Alert.alert('Login Failed', error?.response?.data?.message || 'Something went wrong');
         },
       }
     );
@@ -48,13 +45,14 @@ export default function SigninScreen() {
   return (
     <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.imageWrapper}>
-        <Image source={require('@/assets/images/SEPHCOCO LOUNGE 3.png')} style={styles.logo} />
+        <Image
+          source={require('@/assets/images/SEPHCOCO LOUNGE 3.png')}
+          style={styles.logo}
+        />
       </View>
-
       <ThemedText type="subtitle" style={{ color: theme.text, textAlign: 'center' }}>
         Welcome Back!!
       </ThemedText>
-
       <View style={styles.form}>
         <InputField
           label="Email Address"
@@ -62,21 +60,18 @@ export default function SigninScreen() {
           value={email}
           onChangeText={setEmail}
         />
-
+       
         <CustomButton
-          text={isPending ? <ActivityIndicator /> : 'Sign In Now'}
+          text={loginMutation.isPending ? <ActivityIndicator /> : 'Sign In Now'}
           onPress={handleLogin}
-          disabled={isPending}
+          disabled={loginMutation.isPending}
         />
-
         <Text style={[styles.loginText, { color: theme.text }]}>
           Don’t have an account?{' '}
-          <Link style={[styles.loginLink, { color: theme.success }]} href="/auth/signup">
+          <Link style={[styles.loginLink, { color: theme.success }]} href="/">
             Sign up
           </Link>
         </Text>
-
-       
       </View>
     </ThemedView>
   );

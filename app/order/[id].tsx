@@ -16,6 +16,7 @@ import { Colors } from '@/constants/Colors';
 import { getUser } from '@/lib/tokenStorage';
 import { useOutlet } from '@/context/outletContext';
 import { useGetOrderById } from '@/mutation/useOrders';
+import LoadingSpinner from '@/components/common/loadingSpinner';
 
 const OrderDetails = () => {
   const navigation = useNavigation();
@@ -43,7 +44,7 @@ console.log('orderid',orderId)
   userId
 );
 
-  console.log(order)
+  console.log('orderid',order)
 
   const handleBack = () => navigation.goBack();
 
@@ -60,9 +61,7 @@ console.log('orderid',orderId)
   if (isLoading) {
     return (
       <Layout>
-        <View style={styles.centered}>
-          <Text>Fetching order details...</Text>
-        </View>
+        <LoadingSpinner />
       </Layout>
     );
   }
@@ -98,56 +97,44 @@ console.log('orderid',orderId)
 
         {/* Product Info */}
         <ProductInfo
-          name={order.product?.name ?? 'Unnamed Product'}
-          image={
-            order.product?.main_image_url
-              ? { uri: order.product.main_image_url }
-              : require('@/assets/images/logo.png')
-          }
-          price={parseFloat(order.unit_price)}
-          ratingCount={order.ratingCount ?? 0}
-          status={order.status}
-          likes={order.likes ?? 0}
-          isFavorite={order.isFavorite ?? false}
-        />
+  name={order.order_number ?? 'Unnamed Product'}
+  image={require('@/assets/images/logo.png')} // fallback since no product image
+  price={parseFloat(order.unit_price)}
+  ratingCount={0} // no rating in order response
+  status={order.status}
+  likes={0}
+  isFavorite={false}
+/>
+{/* Notes Section */}
+<View style={styles.descriptionSection}>
+  <Text style={styles.sectionTitle}>Order Notes</Text>
+  <Text style={styles.descriptionText}>
+    {order.additional_notes ?? 'No notes provided for this order.'}
+  </Text>
+</View>
 
-        {/* Description */}
-        <View style={styles.descriptionSection}>
-          <Text style={styles.sectionTitle}>Product Description</Text>
-          <Text style={styles.descriptionText}>
-            {order.product?.description ??
-              'No description available for this product.'}
-          </Text>
-        </View>
+      
 
-        {/* Info Sections */}
-        <View style={styles.infoSectionsContainer}>
-          <InfoSection
-            title="Payment Information"
-            items={[
-              { label: 'Payment Method:', value: 'Door step Delivery' },
-              {
-                label: 'Payment Details:',
-                value: 'Paid at point of delivery',
-              },
-            ]}
-          />
+       <View style={styles.infoSectionsContainer}>
+  <InfoSection
+    title="Payment Information"
+    items={[
+      { label: 'Payment Method:', value: 'Door step Delivery' },
+      { label: 'Payment Details:', value: 'Paid at point of delivery' },
+    ]}
+  />
 
-          <InfoSection
-            title="Delivery Information"
-            items={[
-              { label: 'Delivery Method:', value: 'Door step Delivery' },
-              {
-                label: 'Shipping Address:',
-                value: order.delivery_address ?? 'Not provided',
-              },
-              {
-                label: 'Shipping Details:',
-                value: 'Delivery estimated within 24 hours',
-              },
-            ]}
-          />
-        </View>
+  <InfoSection
+    title="Delivery Information"
+    items={[
+      { label: 'Delivery Method:', value: 'Door step Delivery' },
+      { label: 'Shipping Address:', value: order.address ?? 'Not provided' },
+      { label: 'Phone Number:', value: order.phone_number },
+      { label: 'Quantity:', value: String(order.quantity) },
+      { label: 'Total Price:', value: `₦${order.total_price}` },
+    ]}
+  />
+  </View>
 
         {/* Help Button */}
         <View style={styles.actionButtons}>

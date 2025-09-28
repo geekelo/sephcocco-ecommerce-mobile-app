@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { Order } from '../types/types';
 import { OrderStatusBadge } from './orderStatus';
 import { Checkbox } from '../ui/checker';
+
 type DeliveryOrderItemProps = {
   order: Order;
   index: number;
@@ -19,10 +20,10 @@ export const DeliveryOrderItem: React.FC<DeliveryOrderItemProps> = ({
   isSelected,
   onSeeMorePress,
 }) => {
-  // const imageSource =
-  // typeof order.image === "string"
-  //   ? { uri: order.image }
-  //   : order.image || require('@/assets/images/logo.png');
+  const imageSource =
+    typeof order.image === 'string'
+      ? { uri: order.image }
+      : order.image || require('@/assets/images/logo.png'); // fallback
 
   return (
     <TouchableOpacity
@@ -32,9 +33,7 @@ export const DeliveryOrderItem: React.FC<DeliveryOrderItemProps> = ({
     >
       <View style={styles.leftColumn}>
         <Checkbox checked={isSelected} onToggle={onClick} />
-     {/* <Image source={imageSource} style={styles.image} />
- */}
-
+        <Image source={imageSource} style={styles.image} />
       </View>
 
       <View style={styles.info}>
@@ -71,13 +70,13 @@ const styles = StyleSheet.create({
   leftColumn: {
     marginRight: 12,
     alignItems: 'center',
-    display:'flex', flexDirection:'row',gap:8
+    flexDirection: 'row',
+    gap: 8,
   },
   image: {
-    width: 64,
-    height: 64,
+    width: 48,
+    height: 48,
     borderRadius: 8,
-    marginTop: 6,
   },
   info: {
     flex: 1,
