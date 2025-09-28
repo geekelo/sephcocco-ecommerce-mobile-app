@@ -64,7 +64,9 @@ const PendingOrders = () => {
     ]).start();
   }, []);
 
-  // Query hooks for different order states
+  // Query hooks for different order states - Only fetch when we have userId and activeOutlet
+  const shouldFetch = Boolean(userId && activeOutlet);
+
   const {
     data: pendingOrdersData,
     isLoading: loadingPending,
@@ -79,19 +81,26 @@ const PendingOrders = () => {
     refetch: refetchPaid,
   } = useGetPaidOrders(activeOutlet ?? "", userId);
 
+  // Note: Using useGetCompletedOrders for "Delivery" tab instead of useGetDeliveringOrders
+  // This might need to be adjusted based on your actual API structure
   const {
     data: completedOrdersData,
     isLoading: loadingCompleted,
     error: completedError,
     refetch: refetchCompleted,
-  } = useGetDeliveringOrders(activeOutlet ?? "", userId);
+  } = useGetCompletedOrders(activeOutlet ?? "", userId );
 
-  const pendingOrders = pendingOrdersData ?? [];
-  const paidOrders = paidOrdersData ?? [];
-  const completedOrders = completedOrdersData ?? [];
-console.log(completedOrdersData)
-console.log(paidOrdersData)
-console.log(pendingOrdersData)
+  // Safely handle the data with fallbacks
+  const pendingOrders = Array.isArray(pendingOrdersData) ? pendingOrdersData : [];
+  const paidOrders = Array.isArray(paidOrdersData) ? paidOrdersData : [];
+  const completedOrders = Array.isArray(completedOrdersData) ? completedOrdersData : [];
+
+  // Debug logs
+  console.log('Current Tab:', selectedTab);
+  console.log('Pending Orders:', pendingOrders.length, pendingOrders);
+  console.log('Paid Orders:', paidOrders.length, paidOrders);
+  console.log('Completed Orders:', completedOrders.length, completedOrders);
+
   // Get current data based on selected tab
   const getCurrentData = () => {
     switch (selectedTab) {
@@ -165,7 +174,7 @@ console.log(pendingOrdersData)
       useNativeDriver: true,
     }).start(() => {
       setSelectedTab(tab);
-      setSelectedOrders([]); // Reset selection
+      setSelectedOrders([]); // Reset selection when changing tabs
       
       Animated.timing(slideAnim, {
         toValue: 0,
@@ -190,8 +199,13 @@ console.log(pendingOrdersData)
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
+    try {
+      await refetch();
+    } catch (error) {
+      console.error('Refresh error:', error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const getTabConfig = (tab: OrderTab) => {
@@ -262,6 +276,12 @@ console.log(pendingOrdersData)
   };
 
   const renderOrderItem = ({ item, index }: { item: any; index: number }) => {
+    // Ensure we have proper data structure
+    if (!item || !item.id) {
+      console.warn('Invalid order item:', item);
+      return null;
+    }
+
     const product = item.product || {};
     const mainImageUrl =
       typeof product.main_image_url === "string" &&
@@ -270,21 +290,20 @@ console.log(pendingOrdersData)
         : undefined;
 
     const orderId = item.id;
-    const quantity = quantities[orderId] ?? item.quantity;
+    const quantity = quantities[orderId] ?? item.quantity ?? 1;
 
     const transformedOrder = {
       ...item,
-      name: product.name,
-      price: parseFloat(item.unit_price),
-      image: mainImageUrl
-        ? mainImageUrl
-        : require("@/assets/images/logo.png"),
+      name: product.name || item.name || 'Unknown Product',
+      price: parseFloat(item.unit_price || item.price || '0'),
+      image: mainImageUrl || require("@/assets/images/logo.png"),
     };
 
     // Render different components based on tab
     if (selectedTab === "Pending") {
       return (
         <Animated.View 
+          key={`pending-${item.id}-${index}`}
           style={[
             styles.orderItemContainer,
             { 
@@ -304,13 +323,13 @@ console.log(pendingOrdersData)
             onIncrease={() =>
               setQuantities((prev) => ({
                 ...prev,
-                [orderId]: (prev[orderId] ?? item.quantity) + 1,
+                [orderId]: (prev[orderId] ?? item.quantity ?? 1) + 1,
               }))
             }
             onDecrease={() =>
               setQuantities((prev) => ({
                 ...prev,
-                [orderId]: Math.max((prev[orderId] ?? item.quantity) - 1, 1),
+                [orderId]: Math.max((prev[orderId] ?? item.quantity ?? 1) - 1, 1),
               }))
             }
           />
@@ -319,6 +338,7 @@ console.log(pendingOrdersData)
     } else {
       return (
         <Animated.View 
+          key={`${selectedTab.toLowerCase()}-${item.id}-${index}`}
           style={[
             styles.orderItemContainer,
             { 
@@ -390,11 +410,12 @@ console.log(pendingOrdersData)
     );
   };
 
-  if (isLoading && !refreshing) {
+  // Show loading only if we're fetching and don't have any cached data
+  if ((isLoading && !displayedOrders.length) || (!userId || !activeOutlet)) {
     return <LoadingSpinner />;
   }
 
-  if (error && !refreshing) {
+  if (error && !refreshing && !displayedOrders.length) {
     return (
       <View style={[styles.container, styles.centerContent]}>
         <View style={styles.errorContainer}>
@@ -428,7 +449,11 @@ console.log(pendingOrdersData)
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Orders</Text>
           <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh}>
-            <MaterialCommunityIcons name="refresh" size={20} color="#6b7280" />
+            <MaterialCommunityIcons 
+              name="refresh" 
+              size={20} 
+              color={refreshing ? "#10b981" : "#6b7280"} 
+            />
           </TouchableOpacity>
         </Animated.View>
 
@@ -450,7 +475,7 @@ console.log(pendingOrdersData)
         ]}>
           <FlatList
             data={displayedOrders}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item, index) => `${selectedTab}-${item?.id || index}`}
             renderItem={renderOrderItem}
             contentContainerStyle={[
               styles.orderList,
@@ -466,6 +491,10 @@ console.log(pendingOrdersData)
               />
             }
             ListEmptyComponent={renderEmptyState}
+            removeClippedSubviews={false} // Helps with rendering issues
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={10}
           />
         </Animated.View>
 
