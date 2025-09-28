@@ -23,14 +23,16 @@ interface SearchBarProps {
   onSearchChange?: (text: string) => void;
   onFilterSelect?: (filter: string) => void;
   filterOpen: boolean;
+  searchQuery?: string; // ✅ Added searchQuery prop
 }
 
 const primaryFilters = [
-  
   'Price: Low to High',
   'Price: High to Low',
   'Newest First',
   'Rating',
+  'Most Liked', // ✅ Added this filter option
+  'Alphabetical', // ✅ Added this filter option
 ];
 
 export function SearchBar({
@@ -39,6 +41,7 @@ export function SearchBar({
   onSearchChange,
   onFilterSelect,
   onCategorySelect,
+  searchQuery = '', // ✅ Added with default value
 }: SearchBarProps) {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
@@ -56,22 +59,35 @@ export function SearchBar({
   const handleCategoryClick = (category: string) => {
     onCategorySelect?.(category);
     onFilterToggle?.();
+    setIsCategoryOpen(false); // ✅ Close category dropdown after selection
   };
+
+  // ✅ Close category dropdown when main filter dropdown closes
+  React.useEffect(() => {
+    if (!filterOpen) {
+      setIsCategoryOpen(false);
+    }
+  }, [filterOpen]);
 
   return (
     <>
       <View style={themedStyles.searchContainer}>
         <Feather name="search" size={20} color={theme.text} style={styles.searchIcon} />
         <TextInput
-          placeholder="Search..."
+          placeholder="Search products..."
           placeholderTextColor={theme.text}
           style={themedStyles.searchInput}
           onChangeText={onSearchChange}
+          value={searchQuery} // ✅ Controlled input with current search value
         />
         <View style={themedStyles.verticalDivider} />
         <TouchableOpacity style={themedStyles.filterButton} onPress={onFilterToggle}>
           <Text style={[styles.filterText, { color: theme.gray }]}>Filter By</Text>
-          <Entypo name="chevron-down" size={14} color={theme.gray} />
+          <Entypo 
+            name={filterOpen ? "chevron-up" : "chevron-down"} // ✅ Dynamic chevron direction
+            size={14} 
+            color={theme.gray} 
+          />
         </TouchableOpacity>
       </View>
 
@@ -79,7 +95,11 @@ export function SearchBar({
         <View style={themedStyles.dropdown}>
           {/* Regular filters */}
           {primaryFilters.map((filter, idx) => (
-            <TouchableOpacity key={idx} onPress={() => handleFilterClick(filter)}>
+            <TouchableOpacity 
+              key={idx} 
+              onPress={() => handleFilterClick(filter)}
+              style={styles.dropdownButton} // ✅ Added better touch target
+            >
               <Text style={themedStyles.dropdownItem}>{filter}</Text>
             </TouchableOpacity>
           ))}
@@ -87,9 +107,9 @@ export function SearchBar({
           {/* Category Toggle */}
           <TouchableOpacity
             onPress={() => setIsCategoryOpen(!isCategoryOpen)}
-            style={styles.categoryToggle}
+            style={[styles.categoryToggle, styles.dropdownButton]} // ✅ Consistent styling
           >
-            <Text style={themedStyles.dropdownItem}>Category</Text>
+            <Text style={themedStyles.dropdownItem}>Categories</Text>
             <Entypo
               name={isCategoryOpen ? 'chevron-up' : 'chevron-down'}
               size={16}
@@ -99,13 +119,36 @@ export function SearchBar({
 
           {/* Category List */}
           {isCategoryOpen && (
-            <View style={{ maxHeight: 200 }}>
-              <ScrollView>
-                {isLoading && <ActivityIndicator size="small" color={theme.orange} />}
-                {error && <Text style={{ color: 'red' }}>Failed to load categories</Text>}
+            <View style={styles.categoryList}>
+              <ScrollView showsVerticalScrollIndicator={true}>
+                {isLoading && (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color={theme.orange} />
+                    <Text style={[styles.loadingText, { color: theme.text }]}>Loading...</Text>
+                  </View>
+                )}
+                
+                {error && (
+                  <Text style={[styles.errorText, { color: 'red' }]}>
+                    Failed to load categories
+                  </Text>
+                )}
+                
+                {categories && categories.length === 0 && !isLoading && (
+                  <Text style={[styles.emptyText, { color: theme.text }]}>
+                    No categories available
+                  </Text>
+                )}
+                
                 {categories?.map((cat: { name: string }, idx: number) => (
-                  <TouchableOpacity key={idx} onPress={() => handleCategoryClick(cat.name)}>
-                    <Text style={[themedStyles.dropdownItem, { paddingLeft: 12 }]}>• {cat.name}</Text>
+                  <TouchableOpacity 
+                    key={idx} 
+                    onPress={() => handleCategoryClick(cat.name)}
+                    style={styles.categoryItem}
+                  >
+                    <Text style={[themedStyles.dropdownItem, styles.categoryItemText]}>
+                      • {cat.name}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -124,12 +167,52 @@ const styles = StyleSheet.create({
   filterText: {
     fontSize: 10,
     marginRight: 4,
+    fontWeight: '500',
   },
   categoryToggle: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    marginTop: 4,
+  },
+  dropdownButton: {
+    paddingVertical: 4,
+  },
+  categoryList: {
+    maxHeight: 200,
+    marginTop: 4,
+  },
+  categoryItem: {
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  categoryItemText: {
+    paddingLeft: 12,
+    fontSize: 14,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+  loadingText: {
+    marginLeft: 8,
+    fontSize: 14,
+  },
+  errorText: {
+    textAlign: 'center',
+    paddingVertical: 16,
+    fontSize: 14,
+  },
+  emptyText: {
+    textAlign: 'center',
+    paddingVertical: 16,
+    fontSize: 14,
+    fontStyle: 'italic',
   },
 });
 
@@ -172,19 +255,19 @@ const getThemedStyles = (theme: any) =>
     dropdown: {
       position: 'absolute',
       top: 80,
-      right: 0,
+      right: screenWidth * 0.05,
       borderRadius: 8,
       borderWidth: 1,
       paddingVertical: 8,
       paddingHorizontal: 12,
       width: screenWidth * 0.6,
-      backgroundColor: '#fff',
-      borderColor: '#ccc',
+      backgroundColor: theme.background, // ✅ Use theme background
+      borderColor: theme.inputBorder, // ✅ Use theme border color
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.2,
       shadowRadius: 4,
-      elevation: 2,
+      elevation: 5, // ✅ Increased elevation for better visibility
       zIndex: 9999,
     },
     dropdownItem: {

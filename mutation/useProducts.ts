@@ -23,27 +23,80 @@ export const useProductById = (outlet: string, id: string | null) => {
   });
 };
 
-// ✅ Like product mutation
 export const useLikeProduct = (outlet: string) => {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (id: string) => likeProduct(outlet, id),
-    onSuccess: (_, id) => {
-      // Invalidate the product queries so UI updates
-      queryClient.invalidateQueries({ queryKey: ["product", outlet, id] });
+
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ["products", outlet] });
+
+      const previous = queryClient.getQueryData<any[]>(["products", outlet]);
+
+      queryClient.setQueryData<any[]>(["products", outlet], (old) =>
+        old?.map((product) =>
+          product.id === id
+            ? {
+                ...product,
+                liked_by_user: true,
+                likes: (product.likes || 0) + 1,
+              }
+            : product
+        ) ?? []
+      );
+
+      return { previous };
+    },
+
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["products", outlet], context.previous);
+      }
+    },
+
+    onSettled: (data, error, id) => {
       queryClient.invalidateQueries({ queryKey: ["products", outlet] });
+      queryClient.invalidateQueries({ queryKey: ["product", outlet, id] });
     },
   });
 };
 
-// ✅ Unlike product mutation
 export const useUnlikeProduct = (outlet: string) => {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (id: string) => unlikeProduct(outlet, id),
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ["product", outlet, id] });
+
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ["products", outlet] });
+
+      const previous = queryClient.getQueryData<any[]>(["products", outlet]);
+
+      queryClient.setQueryData<any[]>(["products", outlet], (old) =>
+        old?.map((product) =>
+          product.id === id
+            ? {
+                ...product,
+                liked_by_user: false,
+                likes: Math.max((product.likes || 0) - 1, 0),
+              }
+            : product
+        ) ?? []
+      );
+
+      return { previous };
+    },
+
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["products", outlet], context.previous);
+      }
+    },
+
+    onSettled: (data, error, id) => {
       queryClient.invalidateQueries({ queryKey: ["products", outlet] });
+      queryClient.invalidateQueries({ queryKey: ["product", outlet, id] });
     },
   });
 };

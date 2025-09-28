@@ -7,47 +7,84 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Product } from '../types/types';
+import { Order } from '../types/types';
 
 interface OrderSummaryProps {
-  products: [];
-  quantity: number; // default quantity if individual product quantity not provided
-  setQuantity: (quantity: number) => void;
-  address: string;
-  setAddress: (address: string) => void;
+  orders: Order[];
+  quantities: { [key: string]: number };
+  onQuantityChange: (orderId: string, newQuantity: number) => void;
+  orderData: {
+    address: string;
+    phone_number: string;
+    additional_notes: string;
+  };
+  onOrderDataChange: (field: string, value: string) => void;
   outlet: string;
-  onProceedToPayment?: () => void;
+  products: Order[];
+  onProceedToPayment: () => void;
+  isUpdating: boolean;
 }
 
 const OrderSummary: React.FC<OrderSummaryProps> = ({
-  products,
-  quantity,
-  setQuantity,
-  address,
-  setAddress,
+  orders,
+  quantities,
+  onQuantityChange,
+  orderData,
+  onOrderDataChange,
   outlet,
+  products,
   onProceedToPayment,
+  isUpdating,
 }) => {
 
   const handleProceed = () => {
-    if (!address.trim()) {
+    if (!orderData.address.trim()) {
       Alert.alert('Required Field', 'Please enter a delivery address before proceeding.');
       return;
     }
-    onProceedToPayment?.();
+    if (!orderData.phone_number.trim()) {
+      Alert.alert('Required Field', 'Please enter your phone number before proceeding.');
+      return;
+    }
+    if (isUpdating) {
+      Alert.alert('Please Wait', 'Please wait for quantity updates to complete.');
+      return;
+    }
+    onProceedToPayment();
   };
 
-  // Calculate subtotal for all products
-  const subtotal = products.reduce((sum, product) => {
-    const price = (product as any)?.price || 0;
-    const qty = (product as any)?.quantity || quantity;
+  // Handle quantity change for individual orders
+  const handleQuantityChange = (order: Order, increment: boolean) => {
+    if (isUpdating) return;
+    
+    const currentQty = quantities[order.id] || 1;
+    const newQuantity = increment ? currentQty + 1 : Math.max(currentQty - 1, 1);
+    
+    if (newQuantity !== currentQty) {
+      onQuantityChange(order.id, newQuantity);
+    }
+  };
+
+  // Calculate subtotal for all orders
+  const subtotal = orders.reduce((sum, order) => {
+    const price = order?.price || 0;
+    const qty = quantities[order.id] || 1;
     return sum + price * qty;
   }, 0);
 
   const deliveryFee = 0; // add logic if needed
   const total = subtotal + deliveryFee;
+
+  // Calculate total items
+  const totalItems = Object.values(quantities).reduce((sum, qty) => sum + qty, 0) || orders.length;
+
+  // Validation helpers
+  const isAddressValid = orderData.address.trim().length > 0;
+  const isPhoneValid = orderData.phone_number.trim().length > 0;
+  const canProceed = isAddressValid && isPhoneValid && !isUpdating;
 
   return (
     <View style={styles.wrapper}>
@@ -57,76 +94,163 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Products */}
-        {/* Products */}
-<View style={styles.section}>
-  <Text style={styles.sectionTitle}>Products</Text>
-  {products.map((product, index) => {
-    const price = (product as any)?.price || 0;
-    const qty = (product as any)?.quantity || quantity;
-
-    return (
-      <View key={index} style={styles.productCard}>
-        <Text style={styles.productName}>
-          {(product as any)?.name || 'Product'}
-        </Text>
-        <Text style={styles.productDescription}>
-          {(product as any)?.description || ''}
-        </Text>
-
-        {/* Price + Quantity Controls */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={styles.productPrice}> ₦ {Number(price ?? 0).toFixed(2)} x {qty}</Text>
-
-          {/* Quantity Buttons */}
-          <View style={styles.quantityContainer}>
-            <TouchableOpacity
-              style={[styles.quantityButton, qty <= 1 && styles.quantityButtonDisabled]}
-              onPress={() => qty > 1 && setQuantity(qty - 1)}
-              disabled={qty <= 1}
-            >
-              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2d3748' }}>-</Text>
-            </TouchableOpacity>
-
-            <View style={styles.quantityDisplay}>
-              <Text style={styles.quantityText}>{qty}</Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.quantityButton}
-              onPress={() => setQuantity(qty + 1)}
-            >
-              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2d3748' }}>+</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    );
-  })}
-</View>
-
-
-        {/* Delivery Address */}
+        {/* Orders/Products */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            Delivery Address <Text style={styles.required}>*</Text>
+            Orders ({orders.length} {orders.length === 1 ? 'item' : 'items'})
           </Text>
-          <View style={styles.inputContainer}>
-            <MaterialCommunityIcons name="map-marker" size={20} color="#718096" style={styles.inputIcon} />
-            <TextInput
-              style={styles.addressInput}
-              placeholder="Enter your delivery address"
-              placeholderTextColor="#a0aec0"
-              value={address}
-              onChangeText={setAddress}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
+          {orders.map((order, index) => {
+            const price = order?.price || 0;
+            const qty = quantities[order.id] || 1;
+            const itemTotal = price * qty;
+
+            return (
+              <View key={order.id || index} style={[styles.productCard, index > 0 && styles.productCardBorder]}>
+                <Text style={styles.productName}>
+                  {order?.name || order?.product?.name || 'Product'}
+                </Text>
+                {(order?.description || order?.product?.description) && (
+                  <Text style={styles.productDescription}>
+                    {order?.description || order?.product?.description}
+                  </Text>
+                )}
+
+                {/* Price Info */}
+                <View style={styles.priceInfoContainer}>
+                  <Text style={styles.unitPrice}>₦{Number(price).toFixed(2)} each</Text>
+                  <Text style={styles.itemTotal}>Total: ₦{itemTotal.toFixed(2)}</Text>
+                </View>
+
+                {/* Quantity Controls */}
+                <View style={styles.quantitySection}>
+                  <Text style={styles.quantityLabel}>Quantity:</Text>
+                  <View style={styles.quantityContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.quantityButton, 
+                        (qty <= 1 || isUpdating) && styles.quantityButtonDisabled
+                      ]}
+                      onPress={() => handleQuantityChange(order, false)}
+                      disabled={qty <= 1 || isUpdating}
+                      activeOpacity={0.7}
+                    >
+                      {isUpdating ? (
+                        <ActivityIndicator size="small" color="#a0aec0" />
+                      ) : (
+                        <MaterialCommunityIcons 
+                          name="minus" 
+                          size={20} 
+                          color={qty <= 1 ? '#a0aec0' : '#2d3748'} 
+                        />
+                      )}
+                    </TouchableOpacity>
+
+                    <View style={styles.quantityDisplay}>
+                      <Text style={styles.quantityText}>{qty}</Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.quantityButton,
+                        isUpdating && styles.quantityButtonDisabled
+                      ]}
+                      onPress={() => handleQuantityChange(order, true)}
+                      disabled={isUpdating}
+                      activeOpacity={0.7}
+                    >
+                      {isUpdating ? (
+                        <ActivityIndicator size="small" color="#a0aec0" />
+                      ) : (
+                        <MaterialCommunityIcons 
+                          name="plus" 
+                          size={20} 
+                          color="#2d3748" 
+                        />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Customer Information Form */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            Customer Information
+          </Text>
+          
+          {/* Delivery Address */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>
+              Delivery Address <Text style={styles.required}>*</Text>
+            </Text>
+            <View style={[
+              styles.inputContainer, 
+              !isAddressValid && orderData.address.length > 0 && styles.inputContainerError
+            ]}>
+              <MaterialCommunityIcons name="map-marker" size={20} color="#718096" style={styles.inputIcon} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter your complete delivery address"
+                placeholderTextColor="#a0aec0"
+                value={orderData.address}
+                onChangeText={(value) => onOrderDataChange('address', value)}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+            {!isAddressValid && orderData.address.length > 0 && (
+              <Text style={styles.errorText}>Please provide a complete delivery address</Text>
+            )}
           </View>
-          {address.trim().length === 0 && (
-            <Text style={styles.helperText}>Please provide a complete delivery address</Text>
-          )}
+
+          {/* Phone Number */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>
+              Phone Number <Text style={styles.required}>*</Text>
+            </Text>
+            <View style={[
+              styles.inputContainer, 
+              !isPhoneValid && orderData.phone_number.length > 0 && styles.inputContainerError
+            ]}>
+              <MaterialCommunityIcons name="phone" size={20} color="#718096" style={styles.inputIcon} />
+              <TextInput
+                style={[styles.textInput, styles.singleLineInput]}
+                placeholder="Enter your phone number"
+                placeholderTextColor="#a0aec0"
+                value={orderData.phone_number}
+                onChangeText={(value) => onOrderDataChange('phone_number', value)}
+                keyboardType="phone-pad"
+                autoComplete="tel"
+              />
+            </View>
+            {!isPhoneValid && orderData.phone_number.length > 0 && (
+              <Text style={styles.errorText}>Please provide a valid phone number</Text>
+            )}
+          </View>
+
+          {/* Additional Notes */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>
+              Additional Notes <Text style={styles.optional}>(Optional)</Text>
+            </Text>
+            <View style={styles.inputContainer}>
+              <MaterialCommunityIcons name="note-text" size={20} color="#718096" style={styles.inputIcon} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="Any special instructions or notes for your order"
+                placeholderTextColor="#a0aec0"
+                value={orderData.additional_notes}
+                onChangeText={(value) => onOrderDataChange('additional_notes', value)}
+                multiline
+                numberOfLines={2}
+                textAlignVertical="top"
+              />
+            </View>
+          </View>
         </View>
 
         {/* Outlet */}
@@ -142,16 +266,41 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Order Summary</Text>
           <View style={styles.summaryContainer}>
+            {/* Individual order breakdown */}
+            {orders.length > 1 && (
+              <>
+                {orders.map((order) => {
+                  const price = order?.price || 0;
+                  const qty = quantities[order.id] || 1;
+                  const itemTotal = price * qty;
+                  
+                  return (
+                    <View key={order.id} style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel} numberOfLines={1}>
+                        {order?.name || order?.product?.name || 'Product'} (×{qty})
+                      </Text>
+                      <Text style={styles.summaryValue}>₦{itemTotal.toFixed(2)}</Text>
+                    </View>
+                  );
+                })}
+                <View style={styles.summaryDivider} />
+              </>
+            )}
+            
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Subtotal</Text>
+              <Text style={styles.summaryLabel}>
+                Subtotal ({totalItems} {totalItems === 1 ? 'item' : 'items'})
+              </Text>
               <Text style={styles.summaryValue}>₦{subtotal.toFixed(2)}</Text>
             </View>
+            
             {deliveryFee > 0 && (
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Delivery Fee</Text>
                 <Text style={styles.summaryValue}>₦{deliveryFee.toFixed(2)}</Text>
               </View>
             )}
+            
             <View style={[styles.summaryRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>₦{total.toFixed(2)}</Text>
@@ -159,13 +308,44 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
           </View>
         </View>
 
-        {/* Proceed */}
+        {/* Form Validation Status */}
+        {(!isAddressValid || !isPhoneValid) && (
+          <View style={styles.validationContainer}>
+            <MaterialCommunityIcons name="information" size={16} color="#e53e3e" />
+            <Text style={styles.validationText}>
+              Please complete all required fields to proceed
+            </Text>
+          </View>
+        )}
+
+        {/* Proceed Button */}
         <TouchableOpacity
-          style={[styles.proceedButton, !address.trim() && styles.proceedButtonDisabled]}
+          style={[
+            styles.proceedButton, 
+            !canProceed && styles.proceedButtonDisabled
+          ]}
           onPress={handleProceed}
-          disabled={!address.trim()}
+          disabled={!canProceed}
+          activeOpacity={0.8}
         >
-          <Text style={styles.proceedButtonText}>Proceed to Payment</Text>
+          {isUpdating ? (
+            <>
+              <ActivityIndicator size="small" color="#fff" style={styles.proceedButtonIcon} />
+              <Text style={styles.proceedButtonText}>Updating...</Text>
+            </>
+          ) : (
+            <>
+              <MaterialCommunityIcons 
+                name="credit-card" 
+                size={20} 
+                color="#fff" 
+                style={styles.proceedButtonIcon}
+              />
+              <Text style={styles.proceedButtonText}>
+                Proceed to Payment (₦{total.toFixed(2)})
+              </Text>
+            </>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -184,7 +364,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     flexGrow: 1,
     padding: 16,
-    paddingBottom: 120, // Extra space for keyboard and button
+    paddingBottom: 120,
   },
   section: {
     marginBottom: 24,
@@ -201,13 +381,25 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#2d3748',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   required: {
     color: '#e53e3e',
+    fontSize: 14,
+  },
+  optional: {
+    color: '#718096',
+    fontSize: 14,
+    fontStyle: 'italic',
   },
   productCard: {
-    padding: 0,
+    paddingVertical: 16,
+    paddingHorizontal: 0,
+  },
+  productCardBorder: {
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    marginTop: 16,
   },
   productName: {
     fontSize: 16,
@@ -218,47 +410,83 @@ const styles = StyleSheet.create({
   productDescription: {
     fontSize: 14,
     color: '#718096',
-    marginBottom: 8,
+    marginBottom: 12,
+    lineHeight: 20,
   },
-  productPrice: {
-    fontSize: 18,
-    fontWeight: '700',
+  priceInfoContainer: {
+    marginBottom: 16,
+  },
+  unitPrice: {
+    fontSize: 14,
+    color: '#718096',
+    marginBottom: 4,
+  },
+  itemTotal: {
+    fontSize: 16,
+    fontWeight: '600',
     color: '#10b981',
+  },
+  quantitySection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  quantityLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#4a5568',
   },
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: '#f7fafc',
     borderRadius: 12,
-    padding: 8,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   quantityButton: {
     backgroundColor: 'white',
     borderRadius: 8,
-    padding: 12,
+    padding: 10,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 40,
+    minHeight: 40,
   },
   quantityButtonDisabled: {
     backgroundColor: '#f7fafc',
     borderColor: '#e2e8f0',
+    opacity: 0.6,
   },
   quantityDisplay: {
     backgroundColor: 'white',
     borderRadius: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    marginHorizontal: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginHorizontal: 8,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    minWidth: 60,
+    minWidth: 50,
     alignItems: 'center',
+    minHeight: 40,
+    justifyContent: 'center',
   },
   quantityText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#2d3748',
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#2d3748',
+    marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -269,36 +497,44 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    minHeight: 100,
-    maxHeight: 150,
+    minHeight: 56,
+  },
+  inputContainerError: {
+    borderColor: '#fc8181',
+    backgroundColor: '#fef2f2',
   },
   inputIcon: {
-    marginTop: 4,
+    marginTop: 2,
     marginRight: 12,
     alignSelf: 'flex-start',
   },
-  addressInput: {
+  textInput: {
     flex: 1,
     fontSize: 16,
     color: '#2d3748',
     textAlignVertical: 'top',
-    minHeight: 80,
-    maxHeight: 120,
-    paddingTop: 4,
-    paddingBottom: 8,
-    lineHeight: 22,
+    paddingTop: 0,
+    paddingBottom: 0,
+    minHeight: 24,
   },
-  helperText: {
+  singleLineInput: {
+    textAlignVertical: 'center',
+    alignSelf: 'center',
+  },
+  errorText: {
     fontSize: 12,
     color: '#e53e3e',
-    marginTop: 4,
+    marginTop: 6,
+    marginLeft: 4,
   },
   outletContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 16,
     backgroundColor: '#f7fafc',
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   outletText: {
     fontSize: 16,
@@ -315,21 +551,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   summaryLabel: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#718096',
+    flex: 1,
+    marginRight: 16,
   },
   summaryValue: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
     color: '#2d3748',
   },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 12,
+  },
   totalRow: {
-    borderTopWidth: 1,
+    borderTopWidth: 2,
     borderTopColor: '#e2e8f0',
-    marginTop: 8,
+    marginTop: 12,
     paddingTop: 16,
   },
   totalLabel: {
@@ -338,9 +581,25 @@ const styles = StyleSheet.create({
     color: '#2d3748',
   },
   totalValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: '#10b981',
+  },
+  validationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  validationText: {
+    fontSize: 14,
+    color: '#e53e3e',
+    marginLeft: 8,
+    flex: 1,
   },
   proceedButton: {
     backgroundColor: '#10b981',
@@ -351,23 +610,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: '#10b981',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowRadius: 8,
     marginTop: 8,
   },
   proceedButtonDisabled: {
     backgroundColor: '#a0aec0',
     elevation: 1,
     shadowOpacity: 0.1,
+    shadowColor: '#000',
+  },
+  proceedButtonIcon: {
+    marginRight: 8,
   },
   proceedButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
-    marginRight: 8,
   },
 });
 
-export default OrderSummary
+export default OrderSummary;

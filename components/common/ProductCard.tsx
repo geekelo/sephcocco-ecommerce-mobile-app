@@ -55,35 +55,58 @@ export function Card({
         ]);
       return;
     }
+    console.log('routing to product')
 
     onPress?.();
   };
 
   const handleToggleLike = () => {
-    if (!isLoggedIn) {
-      onLoginPrompt?.();
-      return;
-    }
-    onToggleLike?.();
-  };
-  const isOutOfStock = out_of_stock_status === true;
-const isLiked = likedByUser ;
+  console.log('❤️ CARD: Toggle like clicked', {
+    isLoggedIn,
+    likedByUser,
+    favorites,
+    title
+  });
 
+  if (!isLoggedIn) {
+    console.log('⚠️ CARD: User not logged in');
+    onLoginPrompt?.();
+    return;
+  }
 
+  console.log('🔄 CARD: Calling onToggleLike...');
+  onToggleLike?.();
+};
+
+// Add logging to the component render to track prop changes
+console.log('🎨 CARD RENDER:', {
+  title,
+  likedByUser,
+  favorites,
+  isLoggedIn,
+  out_of_stock_status
+});
+
+const isOutOfStock = out_of_stock_status === true;
+const isLiked = likedByUser;
+
+console.log('🎨 CARD STATE:', { isOutOfStock, isLiked });
   return (
     <ThemedView style={styles.card}>
-      <TouchableOpacity
-        style={styles.likeButton}
-        onPress={handleToggleLike}
-        hitSlop={10}
-      >
-        <AntDesign
-          name={isLiked ? 'heart' : 'hearto'}
-          size={16}
-          color={isLiked ? theme.orange : theme.gray}
-        />
-      </TouchableOpacity>
-
+     <TouchableOpacity
+  style={styles.likeButton}
+  onPress={() => {
+    console.log('💗 Heart icon pressed:', { isLiked, isLoggedIn });
+    handleToggleLike();
+  }}
+  hitSlop={10}
+>
+  <AntDesign
+    name={isLiked ? 'heart' : 'hearto'}
+    size={16}
+    color={isLiked ? theme.orange : theme.gray}
+  />
+</TouchableOpacity>
       {/* 🖼️ Product Image */}
       <Image source={image} style={styles.image} />
 

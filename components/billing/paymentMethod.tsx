@@ -104,6 +104,19 @@ export default function PaymentMethod({
     ]).start();
   };
 
+  const handlePaymentSuccess = () => {
+    setCurrentStep('complete');
+    setShowModal(false);
+    setShowPaystackModal(false);
+    
+    // Show success modal briefly, then navigate to orders
+    setShowSuccessModal(true);
+    setTimeout(() => {
+      setShowSuccessModal(false);
+      router.push("/orders"); // Changed from "/pharmacy" to "/orders"
+    }, 2000); // Show success modal for 2 seconds before redirecting
+  };
+
   const handleBankPaymentConfirm = () => {
     setCurrentStep('processing');
 
@@ -123,9 +136,8 @@ export default function PaymentMethod({
       },
       {
         onSuccess: (res) => {
-          setCurrentStep('complete');
-          setShowModal(false);
-          setTimeout(() => setShowSuccessModal(true), 500);
+          console.log("✅ Bank Payment Successful:", res);
+          handlePaymentSuccess();
         },
         onError: (err) => {
           console.error("❌ Bank Payment Failed:", err);
@@ -237,8 +249,8 @@ export default function PaymentMethod({
         },
         {
           onSuccess: (res) => {
-            setCurrentStep('complete');
-            setTimeout(() => setShowSuccessModal(true), 500);
+            console.log("✅ Online Payment Verified Successfully:", res);
+            handlePaymentSuccess();
           },
           onError: (err) => {
             console.error("❌ Payment Verification Failed:", err);
@@ -518,10 +530,13 @@ export default function PaymentMethod({
       {/* Success Modal */}
       <SuccessModal
         visible={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
+        onClose={() => {
+          setShowSuccessModal(false);
+          router.push("/orders");
+        }}
         onButtonPress={() => {
           setShowSuccessModal(false);
-          router.push("/pharmacy");
+          router.push("/orders");
         }}
       />
     </Animated.View>
@@ -571,7 +586,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 2,
     backgroundColor: '#e2e8f0',
-    marginHorizontal: 8,
+    marginHorizontally: 8,
   },
   progressLineActive: {
     backgroundColor: '#3182ce',
